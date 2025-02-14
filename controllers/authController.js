@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const sendEmail = require("../config/sendMail");
+const { createNotification } = require("../config/Notification");
 
 // signup
 const userSignup = async (req, res, next) => {
@@ -93,43 +94,46 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-// to login
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Correct bcrypt.compare usage
-    if (await bcrypt.compare(password, user.password)) {
-      const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET);
-
-      return res.status(200).json({
-        success: true,
-        message: "Login successful",
-        token,
-      });
+    if (!user.isEmailVerified) {
+      return res.status(401).json({ success: false, message: "Email not verified" });
     }
 
-    return res.status(401).json({
-      success: false,
-      message: "Password does not match",
+    // Compare passwords
+    if (!(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "3h" } // Token expires in 7 days
+    );
+
+    // Set token in HTTP-only cookie (safer than localStorage)
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 3 * 60 * 1000, // 7 days
     });
+
+    res.status(200).json({ success: true, message: "Login successful", token });
   } catch (error) {
     console.error("Login Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
+module.exports = { login };
+
 
 const forgotPassword = async (req, res) => {
   try {
@@ -189,12 +193,16 @@ const resetPassword = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // 🔹 Check if OTP exists & is not expired
     if (!user.resetPasswordOtp || user.resetPasswordExpires < Date.now()) {
-      return res.status(400).json({ success: false, message: "OTP expired or invalid" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP expired or invalid" });
     }
 
     // 🔹 Hash input OTP for comparison
@@ -205,7 +213,6 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
-
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // 🔹 Update password & clear OTP fields
@@ -213,12 +220,64 @@ const resetPassword = async (req, res) => {
     user.resetPasswordOtp = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
+    const noti = await createNotification(
+      user._id,
+      "Password Changed",
+      `Your Password has been Chnages on ${Date.now()}`
+    );
 
-    return res.status(200).json({ success: true, message: "Password reset successful" });
-
+    return res
+      .status(200)
+      .json({ success: true, message: "Password reset successful" });
   } catch (error) {
     console.error("Error resetting password:", error);
-    return res.status(500).json({ success: false, message: "Internal Server Error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+const updatePassword = async (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
+
+  try {
+    // 🔹 Find user by email
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // 🔹 Compare old password correctly
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(402).json({
+        success: false,
+        message: "Your old password does not match the existing password",
+      });
+    }
+
+    // 🔹 Hash the new password and update it
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    // 🔹 Send notification
+    await createNotification(
+      user._id,
+      "Password Changed",
+      `Your password has been changed on ${new Date().toLocaleString()}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+
+  } catch (error) {
+    console.error("Error updating password:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
 
@@ -229,4 +288,5 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
+  updatePassword,
 };

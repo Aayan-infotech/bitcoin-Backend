@@ -1,38 +1,43 @@
-// Load environment va 
-require("dotenv").config()
+// Load environment variables
+require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
-const path = require("path");
-const fs = require("fs");
-const bodyParser = require("body-parser");
+const http = require("http");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const routes = require("./routes");
+const { connectToDb } = require("./config/mongoDb");
+const setupSocket = require("./config/socket");
+
 const PORT = process.env.PORT || 3000;
-const routes=require("./routes")
-const {connectToDb}=require("./config/mongoDb")
-
-// integrating socket io
 const app = express();
+const server = http.createServer(app); // Create an HTTP server
 
+// 🔹 Improved CORS Configuration
 const corsOptions = {
-  origin: "*",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  origin: process.env.ALLOWED_ORIGINS || "*",  
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
   credentials: true,
   optionsSuccessStatus: 204,
 };
-
-// Middleware
 app.use(cors(corsOptions));
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(express.json());
+
+// 🔹 Middleware
+app.use(express.json({ limit: "50mb" })); // No need for bodyParser.json()
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use("/api", routes); 
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// 🔹 Routes
+app.use("/api", routes);
 
 
-app.listen(PORT,()=>{
-  connectToDb()
-  console.log(`app listening at PORT ${PORT}`)
-})
+// 🔹 Start the Server
+server.listen(PORT, async () => {
+  try {
+    await connectToDb();
+    console.log(`🚀 Server running on PORT ${PORT}`);
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1); // Stop server if DB fails
+  }
+});
+
