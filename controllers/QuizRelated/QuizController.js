@@ -31,7 +31,7 @@ exports.getAllQuizzes = async (req, res) => {
 // Get a specific quiz by ID
 exports.getQuizById = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.quizId).populate("questions");
+    const quiz = await Quiz.findById(req.params.id).populate("questions");
     if (!quiz) {
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
@@ -40,32 +40,33 @@ exports.getQuizById = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching quiz", error: error.message });
   }
 };
-
-// Add questions to a Quiz
-exports.addQuestionsToQuiz = async (req, res) => {
-  try {
-    const { quizId } = req.params;
-    const { questions } = req.body; // Expecting an array of question objects
-
-    // Create and store new questions first
-    const createdQuestions = await Question.insertMany(questions);
-
-    // Extract question IDs
-    const questionIds = createdQuestions.map(q => q._id);
-
-    // Update the quiz with new questions
-    const updatedQuiz = await Quiz.findByIdAndUpdate(
-      quizId,
-      { $push: { questions: { $each: questionIds } } },
-      { new: true, runValidators: true }
-    ).populate("questions");
-
-    if (!updatedQuiz) {
-      return res.status(404).json({ success: false, message: "Quiz not found" });
+exports.removeQuestionFromQuiz = async (req, res) => {
+    try {
+      const { quizId, questionId } = req.body; // Get IDs from request params
+  
+      // Find the quiz and update by pulling the questionId from the questions array
+      const updatedQuiz = await Quiz.findByIdAndUpdate(
+        quizId,
+        { $pull: { questions: questionId } }, // Remove the questionId from the array
+        { new: true } // Return the updated quiz
+      ).populate("questions");
+  
+      if (!updatedQuiz) {
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: "Question removed successfully",
+        quiz: updatedQuiz,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Error removing question",
+        error: error.message,
+      });
     }
+  };
+  
 
-    res.status(200).json({ success: true, message: "Questions added successfully", quiz: updatedQuiz });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error adding questions", error: error.message });
-  }
-};
