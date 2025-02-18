@@ -103,7 +103,7 @@ exports.removeQuestionFromQuiz = async (req, res) => {
     });
   }
 };
-
+// submit all the answers  
 exports.submitQuizAnswers = async (req, res) => {
   try {
     const { quizId, userId, answers } = req.body;

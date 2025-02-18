@@ -19,6 +19,18 @@ const UserSchema = new Schema(
     emailVerificationOtp: { type: String },
     emailVerificationExpires: { type: Date },
     isEmailVerified: { type: Boolean, default: false },
+    courseProgress: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "courseProgress",
+			},
+		],
+    Courses: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "Course",
+			},
+		],
 
     resetPasswordOtp: { type: String },
     resetPasswordExpires: { type: Date },

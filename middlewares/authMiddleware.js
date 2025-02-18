@@ -1,27 +1,41 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 
-exports.authMiddleware = async (req, res, next) => {
+exports.auth = async (req, res, next) => {
   try {
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
-
+    // Extracting JWT from request cookies, body or header
+    console.log("into auth");
+    const token =
+      req.cookies.token ||
+      req.body.token ||
+      req.header("Authorization").replace("Bearer ", "");
+    // console.log(token)
+    // If JWT is missing, return 401 Unauthorized response
     if (!token) {
-      return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
+      return res.status(401).json({ success: false, message: `Token Missing` });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach user to request
-    req.user = await User.findById(decoded.id).select("-password"); // Exclude password field
-
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "User not found" });
+    try {
+      // Verifying the JWT using the secret key stored in environment variables
+      const decode = await jwt.verify(token, process.env.JWT_SECRET);
+      // Storing the decoded JWT payload in the request object for further use
+      // console.log(decode);
+      req.user = decode;
+      // console.log("token",decode);
+    } catch (error) {
+      // If JWT verification fails, return 401 Unauthorized response
+      return res
+        .status(401)
+        .json({ success: false, message: "token is invalid" });
     }
 
-    next(); // Proceed to the next middleware
+    // If JWT is valid, move on to the next middleware or request handler
+    next();
   } catch (error) {
-    console.error("Auth Middleware Error:", error);
-    res.status(401).json({ success: false, message: "Invalid or expired token" });
+    // If there is an error during the authentication process, return 401 Unauthorized response
+    return res.status(401).json({
+      success: false,
+      message: `Something Went Wrong While Validating the Token`,
+    });
   }
 };
