@@ -14,7 +14,7 @@ exports.createFAQ = async (req, res) => {
 // Get all FAQ entries
 exports.getAllFAQs = async (req, res) => {
     try {
-        const faqs = await FAQ.find();
+        const faqs = await FAQ.find({});
         res.json({message:"FAQ fetched Successfully",faqs});
     } catch (error) {
         res.status(500).json({ error: error.message });
