@@ -83,11 +83,11 @@ exports.removeQuestionFromQuiz = async (req, res) => {
       { $pull: { questions: questionId } }, // Remove the questionId from the array
       { new: true } // Return the updated quiz
     ).populate("questions");
-
-    if (!updatedQuiz) {
+   const deletedQuestion= await Question.findByIdAndDelete(questionId)
+    if (!updatedQuiz||!deletedQuestion) {
       return res
         .status(404)
-        .json({ success: false, message: "Quiz not found" });
+        .json({ success: false, message: "Invalid Quiz or Question ID" });
     }
 
     res.status(200).json({

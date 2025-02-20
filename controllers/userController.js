@@ -8,10 +8,7 @@ const defaultImage = {
     contentType: 'image/png'
 };
 
-// Helper function to generate image URLs
-const generateImageURL = (req, filename) => {
-    return `${req.protocol}://${req.get('host')}/uploads/${filename}`;
-};
+
 
 //to Create user 
 const register = async (req, res, next) => {
@@ -163,18 +160,7 @@ const deleteUser = async (req, res, next) => {
     }
 };
 
-// images
-const getImage = (req, res) => {
-    const filepath = path.join(__dirname, '../uploads', req.params.filename);
-    fs.readFile(filepath, (err, data) => {
-        if (err) {
-            return res.status(404).json({ message: 'Image not found' });
-        }
-        const mimeType = req.params.filename.split('.').pop();
-        res.setHeader('Content-Type', `image/${mimeType}`);
-        res.send(data);
-    });
-};
 
 
-module.exports = { register, getAllUsers, getUserById, updateUser, deleteUser, getImage };
+
+module.exports = { register, getAllUsers, getUserById, updateUser, deleteUser };

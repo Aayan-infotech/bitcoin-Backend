@@ -14,6 +14,11 @@ const UserSchema = new Schema(
       type: String,
       enum: ["Male", "Female", "Other"],
     },
+    userType: {
+      type: String,
+      enum: ["User", "Admin"],
+      default:"User"
+    },
     images: { type: String },
 
     emailVerificationOtp: { type: String },
@@ -29,6 +34,12 @@ const UserSchema = new Schema(
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: "Course",
+			},
+		],
+    Quizzes: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "Quiz",
 			},
 		],
 

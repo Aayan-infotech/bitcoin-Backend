@@ -1,5 +1,7 @@
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const Question = require("../../models/QuizRelated/QuestionsModel");
+const User = require("../../models/userModel");
+
 
 // Start a quiz attempt
 exports.startQuiz = async (req, res) => {
@@ -29,34 +31,11 @@ exports.startQuiz = async (req, res) => {
   }
 };
 
-// Finish a quiz
-exports.finishQuiz = async (req, res) => {
-  try {
-    const { userId, quizId } = req.body;
-
-    const attempt = await QuizAttempt.findOne({ userId, quizId });
-    if (!attempt) {
-      return res.status(404).json({ success: false, message: "Quiz attempt not found" });
-    }
-
-    // Calculate percentage
-    if (attempt.totalQuestions > 0) {
-      attempt.percentage = (attempt.score / attempt.totalQuestions) * 100;
-    }
-
-    await attempt.save();
-
-    res.status(200).json({ success: true, message: "Quiz completed", attempt });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error finishing quiz", error });
-  }
-};
-
 // Get a user's quiz progress
-exports.getUserProgress = async (req, res) => {
+exports.getUserAttempts = async (req, res) => {
   try {
     const { userId } = req.params;
-    const progress = await QuizAttempt.find({ userId }).populate("quizId");
+    const progress = await QuizAttempt.find({ userId }).populate("quizId").sort({ updatedAt: -1 })
 
     res.status(200).json({ success: true, progress });
   } catch (error) {
