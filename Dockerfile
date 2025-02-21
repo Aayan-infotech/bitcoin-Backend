@@ -2,7 +2,7 @@ FROM node:20
 
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json files to install dependencies
+# Copy package.json and package-lock.json files t
 COPY package*.json ./
 
 # Install dependencies
