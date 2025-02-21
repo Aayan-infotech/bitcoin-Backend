@@ -1,4 +1,5 @@
 const { createCourse, getCourseDetails, editCourse, getAllCourses } = require("../../controllers/CourseRelated/CourseController");
+const { updatecourseProgress, startCourse, getCoursesWithProgress } = require("../../controllers/CourseRelated/courseProgress");
 const { createSection, deleteSection } = require("../../controllers/CourseRelated/Sections");
 const { auth } = require("../../middlewares/authMiddleware");
 
@@ -19,6 +20,13 @@ router.post("/create-section",createSection)
 router.delete("/delete-section/:sectionId",deleteSection)
 // ***************************** Course CRUD Routes************************************
 
+
+// ***************************** Course watching Routes************************************
+
+
+router.post("/start-course", startCourse);
+router.post("/update-progress",updatecourseProgress)
+router.get("/get-user-course-progress/:userId",getCoursesWithProgress)
 
 
 
