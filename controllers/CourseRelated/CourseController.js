@@ -6,7 +6,7 @@ const User = require("../../models/userModel");
 exports.createCourse = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { courseName, courseDescription, price, status } = req.body;
+    const { courseName, courseDescription,  status } = req.body;
 
     if (!courseName || !courseDescription || !price ) {
       return res
@@ -54,6 +54,7 @@ exports.createCourse = async (req, res) => {
 exports.getAllCourses = async (req, res) => {
   try {
     const allCourses = await Course.find({});
+    ;
     res.status(200).json({ success: true, data: allCourses });
   } catch (error) {
     res
@@ -70,7 +71,6 @@ exports.getAllCourses = async (req, res) => {
 exports.getCourseDetails = async (req, res) => {
   try {
     const { courseId } = req.params;
-
     // Find the course and populate instructor & courseContent (which further populates Sections)
     const courseDetails = await Course.findById(courseId)
       .populate("instructor", "name email") // Populate instructor with selected fields
