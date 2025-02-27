@@ -8,12 +8,13 @@ exports.createQuiz = async (req, res) => {
   try {
     const { title, description, image, timeLimit } = req.body;
     console.log(req?.user);
+    console.log(req.fileLocations)
     // const createdBy = req.user.id; // Assuming `req.user` contains admin ID
 
     const newQuiz = new Quiz({
       title,
       description,
-      image,
+      image:req.fileLocations[0],
       timeLimit,
       questions: [],
     });
