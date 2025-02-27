@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 const server = http.createServer(app); // Create an HTTP server
 
-// 🔹 Improved CORS Configuration
+// 🔹 CORS Configuration
 const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS || "*",  
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
@@ -22,13 +22,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // 🔹 Middleware
-app.use(express.json({ limit: "50mb" })); // No need for bodyParser.json()
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // 🔹 Routes
 app.use("/api", routes);
 
+// 🔹 Setup WebSockets for Real-Time Notifications
+setupSocket(server);
 
 // 🔹 Start the Server
 server.listen(PORT, async () => {
@@ -37,7 +39,6 @@ server.listen(PORT, async () => {
     console.log(`🚀 Server running on PORT ${PORT}`);
   } catch (error) {
     console.error("❌ Database connection failed:", error);
-    process.exit(1); // Stop server if DB fails
+    process.exit(1);
   }
 });
-

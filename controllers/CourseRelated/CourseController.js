@@ -31,6 +31,10 @@ exports.createCourse = async (req, res) => {
 
     // instructor.courses.push(newCourse._id);
     await instructor.save();
+    const allUsers = await User.find({}, "_id"); // Fetch all users
+    allUsers.forEach((user) =>
+      global.sendNotification(user._id, `A new course "${courseName}" has been added.`, "course")
+    );
 
     res
       .status(200)

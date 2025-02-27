@@ -1,6 +1,7 @@
+const { uploadToS3 } = require("../../config/s3Setup");
 const { createCourse, getCourseDetails, editCourse, getAllCourses } = require("../../controllers/CourseRelated/CourseController");
 const { updatecourseProgress, startCourse, getCoursesWithProgress } = require("../../controllers/CourseRelated/courseProgress");
-const { createSection, deleteSection } = require("../../controllers/CourseRelated/Sections");
+const { createSection, deleteSection, updateSection } = require("../../controllers/CourseRelated/Sections");
 const { auth } = require("../../middlewares/authMiddleware");
 
 const express=require("express")
@@ -16,7 +17,8 @@ router.patch("/update-course/:courseId",editCourse)
 
 
 // ***************************** Section CRUD Routes************************************
-router.post("/create-section",createSection)
+router.post("/create-section",uploadToS3,createSection)
+router.patch("/update-section/:sectionId",uploadToS3,updateSection)
 router.delete("/delete-section/:sectionId",deleteSection)
 // ***************************** Course CRUD Routes************************************
 

@@ -220,11 +220,11 @@ const resetPassword = async (req, res) => {
     user.resetPasswordOtp = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-    const noti = await createNotification(
+    global.sendNotification(
       user._id,
-      "Password Changed",
-      `Your Password has been Chnages on ${Date.now()}`
-    );
+      `Your Password has been successfully changed on ${Date.now().toLocaleString()}`,
+      "course"
+    )
 
     return res
       .status(200)
@@ -261,11 +261,11 @@ const updatePassword = async (req, res) => {
     await user.save();
 
     // 🔹 Send notification
-    await createNotification(
+    global.sendNotification(
       user._id,
-      "Password Changed",
-      `Your password has been changed on ${new Date().toLocaleString()}`
-    );
+      `Your Password has been successfully updated on ${Date.now().toLocaleString()}`,
+      "course"
+    )
 
     return res.status(200).json({
       success: true,

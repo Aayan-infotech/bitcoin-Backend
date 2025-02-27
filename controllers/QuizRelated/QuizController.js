@@ -1,6 +1,7 @@
 const Quiz = require("../../models/QuizRelated/QuizModel");
 const Question = require("../../models/QuizRelated/QuestionsModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
+const User = require("../../models/userModel");
 
 // Create a new Quiz
 exports.createQuiz = async (req, res) => {
@@ -17,6 +18,10 @@ exports.createQuiz = async (req, res) => {
       questions: [],
     });
     await newQuiz.save();
+     const allUsers = await User.find({}, "_id"); // Fetch all users
+        allUsers.forEach((user) =>
+          global.sendNotification(user._id, `A new Quiz "${title}" has been added.`, "quiz")
+        );
 
     res
       .status(201)
@@ -148,6 +153,8 @@ exports.submitQuizAnswers = async (req, res) => {
     });
 
     await quizAttempt.save();
+    global.sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "course")
+    
 
     res.status(200).json({
       success: true,

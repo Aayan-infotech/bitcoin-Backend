@@ -138,7 +138,11 @@ const updateUser = async (req, res, next) => {
 
             user.images = images;
         }
-
+        global.sendNotification(
+            user._id,
+            `Your Details are Updated successfully`,
+            "profile"
+          )
         await user.save();
         return next(createSuccess(200, "User Details Updated successfully", user));
     } catch (error) {
