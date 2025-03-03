@@ -197,21 +197,4 @@ exports.updateCourseStatus = async (req, res) => {
     });
   }
 };
-exports.deleteCourse = async (req, res) => {
-  try {
-    console.log("into deletere")
-    const { courseId } = req.params;
 
-     await Course.findByIdAndDelete(courseId);
-    res.status(200).json({
-      success: true,
-      message: "Course Deleted successfully",
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating course status",
-      error: error.message,
-    });
-  }
-};
