@@ -3,13 +3,13 @@ const {
   createQuiz,
   getQuizById,
   getAllQuizzes,
-  removeQuestionFromQuiz,
   submitQuizAnswers,
 } = require("../../controllers/QuizRelated/QuizController");
 const { uploadToS3 } = require("../../config/s3Setup");
 const { authMiddleware } = require("../../middlewares/authMiddleware");
 const {
   addQuestionsToQuiz,
+  removeQuestionFromQuiz,
   deleteQuestion,
   updateQuestion,
 } = require("../../controllers/QuizRelated/QuestionsController");
@@ -34,7 +34,7 @@ router.post("/submit-answers", submitQuizAnswers);
 // ********************************************
 // question CRUD Related Routes
 // ********************************************
-router.post("/add-question", addQuestionsToQuiz);
+router.post("/add-question/:quizId", addQuestionsToQuiz);
 router.delete("/delete-question", deleteQuestion);
 router.patch("/update-question/:questionId", updateQuestion);
 

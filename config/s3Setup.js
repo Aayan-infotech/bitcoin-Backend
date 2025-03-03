@@ -46,8 +46,8 @@ const getS3Client = async () => {
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
-}).array('file', 5); // Allows multiple files
+  limits: { fileSize:50 * 1024 * 1024 }, // 5MB file size limit
+}).array('files', 5); // Allows multiple files
 
 // Middleware for Uploading Files to S3 (Always Calls Next)
 const uploadToS3 = async (req, res, next) => {

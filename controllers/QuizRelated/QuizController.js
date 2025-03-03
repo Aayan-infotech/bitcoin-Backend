@@ -2,11 +2,12 @@ const Quiz = require("../../models/QuizRelated/QuizModel");
 const Question = require("../../models/QuizRelated/QuestionsModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
+const Course = require("../../models/CourseRelated/CourseModel");
 
 // Create a new Quiz
 exports.createQuiz = async (req, res) => {
   try {
-    const { title, description, image, timeLimit } = req.body;
+    const { title, description, timeLimit } = req.body;
     console.log(req?.user);
     console.log(req.fileLocations)
     // const createdBy = req.user.id; // Assuming `req.user` contains admin ID
@@ -47,7 +48,7 @@ exports.createQuiz = async (req, res) => {
 exports.getAllQuizzes = async (req, res) => {
   try {
     const quizzes = await Quiz.find().populate("questions");
-    res.status(200).json({ success: true, quizzes });
+    res.status(200).json({ success: true, quizzes ,message:"Quizzes Fetched Successfully"});
   } catch (error) {
     res
       .status(500)
@@ -79,36 +80,7 @@ exports.getQuizById = async (req, res) => {
       });
   }
 };
-exports.removeQuestionFromQuiz = async (req, res) => {
-  try {
-    const { quizId, questionId } = req.body; // Get IDs from request params
 
-    // Find the quiz and update by pulling the questionId from the questions array
-    const updatedQuiz = await Quiz.findByIdAndUpdate(
-      quizId,
-      { $pull: { questions: questionId } }, // Remove the questionId from the array
-      { new: true } // Return the updated quiz
-    ).populate("questions");
-   const deletedQuestion= await Question.findByIdAndDelete(questionId)
-    if (!updatedQuiz||!deletedQuestion) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid Quiz or Question ID" });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Question removed successfully",
-      quiz: updatedQuiz,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error removing question",
-      error: error.message,
-    });
-  }
-};
 // submit all the answers  
 exports.submitQuizAnswers = async (req, res) => {
   try {
@@ -170,3 +142,4 @@ exports.submitQuizAnswers = async (req, res) => {
       .json({ success: false, message: "Error submitting quiz", error });
   }
 };
+

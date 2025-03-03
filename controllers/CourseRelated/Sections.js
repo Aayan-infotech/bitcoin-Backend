@@ -1,23 +1,27 @@
 const Section = require("../../models/CourseRelated/CourseSectionsModel");
 const Course = require("../../models/CourseRelated/CourseModel");
+const User = require("../../models/userModel");
 
 exports.createSection = async (req, res) => {
   try {
-    console.log("creating course",req.body)
-    const { courseId, title, description } = req.body;
-    const video = req?.files?.video;
+    const { courseId, title, description, timeDuration } = req.body;
+    console.log("creating course", timeDuration);
 
     if (!courseId || !title || !description) {
       return res
         .status(400)
         .json({ success: false, message: "All Fields are Required" });
     }
+    let videoUrl;
+    if (req.fileLocations[0]) {
+      videoUrl = req.fileLocations[0];
+    }
 
     const newSection = await Section.create({
       title,
-      timeDuration: video?.duration || 5, // Default if no duration available
+      timeDuration: timeDuration, // Default if no duration available
       description,
-      videoUrl: video?.secure_url || "file.url", // Default URL if no video
+      videoUrl: videoUrl || "file.url", // Default URL if no video
     });
 
     // Find the course and update its courseContent array
@@ -57,10 +61,12 @@ exports.createSection = async (req, res) => {
 
 exports.updateSection = async (req, res) => {
   try {
-    const { sectionId, title, description } = req.body;
-    const Section = await Section.findById(sectionId);
+    const { title, description } = req.body;
+    const { sectionId } = req.params;
+    console.log(req.fileLocations[0]);
+    const SectiontoUpdate = await Section.findById(sectionId);
 
-    if (!Section) {
+    if (!SectiontoUpdate) {
       return res.status(404).json({
         success: false,
         message: "Section not found",
@@ -68,15 +74,17 @@ exports.updateSection = async (req, res) => {
     }
 
     if (title !== undefined) {
-      Section.title = title;
+      SectiontoUpdate.title = title;
     }
 
     if (description !== undefined) {
-      Section.description = description;
+      SectiontoUpdate.description = description;
     }
-
-    await Section.save();
-    const updatedSection = await Section.findById(quizId).populate("Section");
+    if (req.fileLocations[0]) {
+      SectiontoUpdate.videoUrl = req.fileLocations[0];
+    }
+    await SectiontoUpdate.save();
+    const updatedSection = await Section.findById(sectionId);
 
     return res.json({
       success: true,

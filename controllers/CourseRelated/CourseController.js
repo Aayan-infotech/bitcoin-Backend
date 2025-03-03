@@ -6,9 +6,9 @@ const User = require("../../models/userModel");
 exports.createCourse = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { courseName, courseDescription,  status } = req.body;
+    const { courseName, courseDescription, status } = req.body;
 
-    if (!courseName || !courseDescription || !price ) {
+    if (!courseName || !courseDescription) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are mandatory" });
@@ -24,7 +24,6 @@ exports.createCourse = async (req, res) => {
       courseName,
       courseDescription,
       instructor: instructor._id,
-      price,
       // thumbnail: thumbnail,
       status: status || "Draft",
     });
@@ -33,24 +32,24 @@ exports.createCourse = async (req, res) => {
     await instructor.save();
     const allUsers = await User.find({}, "_id"); // Fetch all users
     allUsers.forEach((user) =>
-      global.sendNotification(user._id, `A new course "${courseName}" has been added.`, "course")
+      global.sendNotification(
+        user._id,
+        `A new course "${courseName}" has been added.`,
+        "course"
+      )
     );
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        data: newCourse,
-        message: "Course created successfully",
-      });
+    res.status(200).json({
+      success: true,
+      data: newCourse,
+      message: "Course created successfully",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to create course",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to create course",
+      error: error.message,
+    });
   }
 };
 
@@ -58,16 +57,17 @@ exports.createCourse = async (req, res) => {
 exports.getAllCourses = async (req, res) => {
   try {
     const allCourses = await Course.find({});
-    ;
-    res.status(200).json({ success: true, data: allCourses });
+    res.status(200).json({
+      success: true,
+      message: "all courses fetched courses successfully",
+      data: allCourses,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch courses",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch courses",
+      error: error.message,
+    });
   }
 };
 
@@ -84,10 +84,16 @@ exports.getCourseDetails = async (req, res) => {
       });
 
     if (!courseDetails) {
-      return res.status(404).json({ success: false, message: "Course not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
     }
 
-    res.status(200).json({ success: true, data: courseDetails });
+    res.status(200).json({
+      success: true,
+      message: "Course Sections fetched successfully",
+      data: courseDetails,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -97,19 +103,17 @@ exports.getCourseDetails = async (req, res) => {
   }
 };
 
-
 // Edit course
 exports.editCourse = async (req, res) => {
   try {
-    const {courseId}=req.params
-    const {  ...updates } = req.body;
+    const { courseId } = req.params;
+    const { ...updates } = req.body;
     const course = await Course.findById(courseId);
     if (!course) {
       return res
         .status(404)
         .json({ success: false, message: "Course not found" });
     }
-
 
     Object.assign(course, updates);
     await course.save();
@@ -120,13 +124,11 @@ exports.editCourse = async (req, res) => {
       data: course,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -155,5 +157,61 @@ exports.deleteCourse = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.updateCourseStatus = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { courseStatus } = req.body;
+
+    if (!courseId || !courseStatus) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all mandatory fields",
+      });
+    }
+
+    const updatedCourse = await Course.findByIdAndUpdate(
+      courseId,
+      { status: courseStatus },
+      { new: true } // This ensures we get the updated document
+    );
+
+    if (!updatedCourse) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Course status updated successfully",
+      updatedCourse,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating course status",
+      error: error.message,
+    });
+  }
+};
+exports.deleteCourse = async (req, res) => {
+  try {
+    console.log("into deletere")
+    const { courseId } = req.params;
+
+     await Course.findByIdAndDelete(courseId);
+    res.status(200).json({
+      success: true,
+      message: "Course Deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating course status",
+      error: error.message,
+    });
   }
 };
