@@ -8,6 +8,7 @@ pipeline {
         DOCKER_HUB_USERNAME = credentials('docker-hub-username')
         DOCKER_HUB_PASSWORD = credentials('docker-hub-password')
         EMAIL_RECIPIENTS = "anurag.yadav@aayaninfotech.com"
+        SONARTOKEN = credentials('sonartoken')
     }
 
     stages {
@@ -29,7 +30,23 @@ pipeline {
                 }
             }
         }
-
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    sh '''
+                    echo "Running SonarQube analysis using Docker..."
+                    docker run --rm \
+                        -v $(pwd):/usr/src \
+                        --network host \
+                        sonarsource/sonar-scanner-cli:latest \
+                        -Dsonar.projectKey=bitcoin-back \
+                        -Dsonar.sources=/usr/src \
+                        -Dsonar.host.url=http://54.236.98.193:9000 \
+                        -Dsonar.login=${SONARTOKEN}
+                    '''
+                }
+            }
+        }
         stage('Login to Docker Hub') {
             steps {
                 script {
