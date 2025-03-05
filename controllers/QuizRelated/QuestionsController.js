@@ -4,7 +4,6 @@ const Quiz = require("../../models/QuizRelated/QuizModel");
 exports.addQuestionsToQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
-    console.log(req.body);
     const { questions } = req.body;
     // Validate questions array
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -78,7 +77,6 @@ exports.removeQuestionFromQuiz = async (req, res) => {
 
 exports.updateQuestion = async (req, res) => {
   try {
-    console.log(req.body);
     const { questionId } = req.params;
     const { text, options, correctAnswer } = req.body;
 
@@ -125,8 +123,6 @@ exports.getQuestionsByQuiz = async (req, res) => {
 exports.deleteQuestion = async (req, res) => {
   try {
     const { questionId } = req.body;
-    console.log(questionId);
-
     // Find and delete the question
     const deletedQuestion = await Question.findByIdAndDelete(questionId);
 

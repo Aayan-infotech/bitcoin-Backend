@@ -4,10 +4,8 @@ const FAQ = require("../models/FAqModel");
 exports.createFAQ = async (req, res) => {
     const {question,answer}=req.body
     try {
-        console.log(question,answer)
         const faq = new FAQ({question,answer});
        const savedData= await faq.save();
-       console.log(savedData)
 
       return  res.status(201).json({message:"FAQ Created Successfully",success:true,savedData});
     } catch (error) {

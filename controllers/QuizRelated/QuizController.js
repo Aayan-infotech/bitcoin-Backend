@@ -8,8 +8,7 @@ const Course = require("../../models/CourseRelated/CourseModel");
 exports.createQuiz = async (req, res) => {
   try {
     const { title, description, timeLimit } = req.body;
-    console.log(req?.user);
-    console.log(req.fileLocations)
+ 
     // const createdBy = req.user.id; // Assuming `req.user` contains admin ID
 
     const newQuiz = new Quiz({
@@ -33,7 +32,6 @@ exports.createQuiz = async (req, res) => {
         quiz: newQuiz,
       });
   } catch (error) {
-    console.log(error);
     res
       .status(500)
       .json({
@@ -85,7 +83,6 @@ exports.getQuizById = async (req, res) => {
 exports.submitQuizAnswers = async (req, res) => {
   try {
     const { quizId, userId, answers } = req.body;
-    console.log(answers);
 
     if (!quizId || !userId || !answers || !Array.isArray(answers)) {
       return res.status(400).json({ success: false, message: "Invalid input" });
@@ -100,7 +97,6 @@ exports.submitQuizAnswers = async (req, res) => {
 
     // Ensure totalQuestions is at least 1 to avoid division by zero
     const totalQuestions = Math.max(quiz.questions.length, 1);
-    console.log("total Questions", totalQuestions);
     // Create a map of questionId -> correctAnswer for O(1) lookup
     const correctAnswersMap = new Map(
       quiz.questions.map((q) => [q._id.toString(), q.correctAnswer])

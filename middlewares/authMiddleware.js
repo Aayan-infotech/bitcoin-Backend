@@ -4,12 +4,10 @@ const User = require("../models/userModel");
 exports.auth = async (req, res, next) => {
   try {
     // Extracting JWT from request cookies, body or header
-    console.log("into auth");
     const token =
       req.cookies.token ||
       req.body.token ||
       req.header("Authorization").replace("Bearer ", "");
-    // console.log(token)
     // If JWT is missing, return 401 Unauthorized response
     if (!token) {
       return res.status(401).json({ success: false, message: `Token Missing` });
@@ -19,7 +17,6 @@ exports.auth = async (req, res, next) => {
       // Verifying the JWT using the secret key stored in environment variables
       const decode = await jwt.verify(token, process.env.JWT_SECRET);
       // Storing the decoded JWT payload in the request object for further use
-      // console.log(decode);
       req.user = decode;
       // console.log("token",decode);
     } catch (error) {

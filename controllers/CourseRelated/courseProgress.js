@@ -7,7 +7,6 @@ const { convertSecondsToDuration } = require("../../utils/convertSecondsToTime")
 exports.startCourse = async (req, res) => {
   try {
       const { userId, courseId } = req.body;
-      console.log(userId, courseId )
       if (!userId || !courseId) {
           return res.status(400).json({ success: false, message: "User ID and Course ID are required." });
       }

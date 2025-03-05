@@ -5,7 +5,6 @@ const User = require("../../models/userModel");
 exports.createSection = async (req, res) => {
   try {
     const { courseId, title, description, timeDuration } = req.body;
-    console.log("creating course", timeDuration);
 
     if (!courseId || !title || !description) {
       return res
@@ -63,7 +62,6 @@ exports.updateSection = async (req, res) => {
   try {
     const { title, description } = req.body;
     const { sectionId } = req.params;
-    console.log(req.fileLocations[0]);
     const SectiontoUpdate = await Section.findById(sectionId);
 
     if (!SectiontoUpdate) {

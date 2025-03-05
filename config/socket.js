@@ -11,20 +11,17 @@ const setupSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("⚡ A user connected:", socket.id);
 
     // Register user socket connection
     socket.on("register", (data) => {
       if (data.event === "register") {
         const { userId } = data; // Extract userId from data object
-        console.log("User registered:", userId);
         connectedUsers[userId] = socket.id;
       }
     });
 
     // Handle user disconnect
     socket.on("disconnect", () => {
-      console.log("❌ A user disconnected:", socket.id);
       for (const [key, value] of Object.entries(connectedUsers)) {
         if (value === socket.id) {
           delete connectedUsers[key];

@@ -19,7 +19,6 @@ const updateProfile = async (req, res) => {
     try {
       const userId = req.params.id;
       const image=req.fileLocations[0]
-      console.log(image)
       const { mobileNumber, name, gender } = req.body;
       
       const user = await User.findById(userId);

@@ -2,7 +2,6 @@ const Alphabet = require("../models/alphabetDetailsModel");
 
 // Create a new alphabet entry
 exports.createAlphabet = async (req, res) => {
-  console.log(req.fileLocations[0])
   try {
     const alphabet = new Alphabet({
         alphabet: req.body.alphabet,

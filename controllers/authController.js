@@ -154,7 +154,6 @@ const forgotPassword = async (req, res) => {
     }
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    console.log(otp);
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     existingUser.resetPasswordOtp = hashedOtp;
@@ -182,7 +181,6 @@ const forgotPassword = async (req, res) => {
       message: "Password reset OTP sent to your registered email.",
     });
   } catch (error) {
-    console.log("Forgot Password Error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Something went wrong. Please try again later.",
