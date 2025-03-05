@@ -54,18 +54,34 @@ exports.getAlphabetById = async (req, res) => {
 // Update an alphabet entry by ID
 exports.updateAlphabet = async (req, res) => {
   try {
-    const alphabet = await Alphabet.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!alphabet) return res.status(404).json({ error: "Alphabet not found" });
+    const { alphabet, description, relatedTerms, examples } = req.body;
+    const file = req.fileLocations[0];
+    
+    const updateData = { alphabet, description, relatedTerms, examples };
+
+    if (file) {
+      updateData.image = file;
+    }
+
+    const alphabetTerm = await Alphabet.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!alphabetTerm)
+      return res.status(404).json({ error: "Alphabet not found" });
+
     res.json({
-        success: true,
-        message: "Alphabet Description updated Successfully",alphabet});
+      success: true,
+      message: "Alphabet updated successfully",
+      alphabetTerm,
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
+
 
 // Delete an alphabet entry by ID
 exports.deleteAlphabet = async (req, res) => {

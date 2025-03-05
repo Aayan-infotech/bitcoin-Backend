@@ -59,7 +59,7 @@ exports.getAllCourses = async (req, res) => {
     const allCourses = await Course.find({});
     res.status(200).json({
       success: true,
-      message: "all courses fetched courses successfully",
+      message: "All courses fetched successfully",
       data: allCourses,
     });
   } catch (error) {
