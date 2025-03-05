@@ -16,7 +16,6 @@ exports.createNotification = async (userId, title, message, type = "info") => {
         console.log(global.io)
         global.io.to(userId.toString()).emit("newNotification", notification);
     }
-    // console.log(global.io)
 
     return notification;
   } catch (error) {

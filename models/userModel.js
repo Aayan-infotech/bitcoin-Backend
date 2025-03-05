@@ -19,7 +19,7 @@ const UserSchema = new Schema(
       enum: ["User", "Admin"],
       default:"User"
     },
-    images: { type: String },
+    image: { type: String },
 
     emailVerificationOtp: { type: String },
     emailVerificationExpires: { type: Date },

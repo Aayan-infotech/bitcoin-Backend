@@ -22,11 +22,14 @@ const userSignup = async (req, res, next) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
 
+
+
+
     const newUser = new User({
       name,
       email,
       password: hashedPassword,
-      mobileNumber,
+      mobileNumber, 
     });
 
     await newUser.save();
@@ -37,6 +40,9 @@ const userSignup = async (req, res, next) => {
       message: "User Signup Successfully",
       newUser,
     });
+
+
+
   } catch (error) {
     console.error("Error signing up user:", error);
     return res
