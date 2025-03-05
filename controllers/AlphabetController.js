@@ -2,14 +2,14 @@ const Alphabet = require("../models/alphabetDetailsModel");
 
 // Create a new alphabet entry
 exports.createAlphabet = async (req, res) => {
+  console.log(req.fileLocations[0])
   try {
-    console.log(req.body);
     const alphabet = new Alphabet({
         alphabet: req.body.alphabet,
         description: req.body.description,
-        image: req.files?.[0]?.path, // If an image is uploaded
-        examples: Array.isArray(req.body.examples) ? req.body.examples : [req.body.examples],
-        relatedTerms: Array.isArray(req.body.relatedTerms) ? req.body.relatedTerms : [req.body.relatedTerms]
+        image: req?.fileLocations[0], // If an image is uploaded
+        examples:  req.body.examples ,
+        relatedTerms: req.body.relatedTerms
     });
     await alphabet.save();
     res.status(201).json({

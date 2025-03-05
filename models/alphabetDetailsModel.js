@@ -15,12 +15,12 @@ const AlphabetDescription=new mongoose.Schema({
         type:String,
         // required:true,
     },
-    examples:[{
+    examples:{
         type:String,
-    }],
-    relatedTerms:[{
+    },
+    relatedTerms:{
         type:String,
-    }]
+    }
 })
 
 module.exports=mongoose.model("Alphabet",AlphabetDescription)
