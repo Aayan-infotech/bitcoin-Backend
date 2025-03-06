@@ -8,7 +8,7 @@ const UserSchema = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String },
+    password: { type: String ,required:true,select:false},
     mobileNumber: { type: String },
     gender: {
       type: String,
@@ -17,31 +17,49 @@ const UserSchema = new Schema(
     userType: {
       type: String,
       enum: ["User", "Admin"],
-      default:"User"
+      default: "User",
     },
     image: { type: String },
+    walletAddress: {
+      type: String,
+    },
+    level: {
+      type: String,
+    },
+    quizPoints: {
+      type: String,
+    },
+    cryptoBalance: {
+      type: String,
+    },
+    linkedCards: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Cards",
+      },
+    ],
 
     emailVerificationOtp: { type: String },
     emailVerificationExpires: { type: Date },
     isEmailVerified: { type: Boolean, default: false },
     courseProgress: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "courseProgress",
-			},
-		],
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "courseProgress",
+      },
+    ],
     Courses: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "Course",
-			},
-		],
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+      },
+    ],
     Quizzes: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "Quiz",
-			},
-		],
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
 
     resetPasswordOtp: { type: String },
     resetPasswordExpires: { type: Date },
@@ -53,7 +71,10 @@ UserSchema.pre("save", async function (next) {
   if (this.isNew && !this.isEmailVerified) {
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    this.emailVerificationOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    this.emailVerificationOtp = crypto
+      .createHash("sha256")
+      .update(otp)
+      .digest("hex");
     this.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
 
     // Send OTP via email
@@ -68,7 +89,7 @@ UserSchema.pre("save", async function (next) {
       <p style="font-size: 12px; color: #777;">If you did not request this, please ignore this email.</p>
     </div>
   `;
-  await sendEmail(this.email, "Email Verification OTP", message);
+    await sendEmail(this.email, "Email Verification OTP", message);
   }
 
   next();
