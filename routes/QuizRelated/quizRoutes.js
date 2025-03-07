@@ -3,7 +3,7 @@ const {
   createQuiz,
   getQuizById,
   getAllQuizzes,
-  submitQuizAnswers,
+  
 } = require("../../controllers/QuizRelated/QuizController");
 const { uploadToS3 } = require("../../config/s3Setup");
 const { authMiddleware } = require("../../middlewares/authMiddleware");
@@ -13,7 +13,7 @@ const {
   deleteQuestion,
   updateQuestion,
 } = require("../../controllers/QuizRelated/QuestionsController");
-const { startQuiz, getUserAttempts, getLeaderboard } = require("../../controllers/QuizRelated/quizProgress");
+const { startQuiz, submitQuizAnswers,getUserAttempts, getLeaderboard } = require("../../controllers/QuizRelated/quizProgress");
 const router = express.Router();
 
 // ********************************************

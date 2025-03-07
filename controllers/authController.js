@@ -8,18 +8,49 @@ const { createNotification } = require("../config/Notification");
 // signup
 const userSignup = async (req, res, next) => {
   try {
-    const { name, email, password, mobileNumber } = req.body;
+    const { name, email, password, mobileNumber, gender } = req.body;
 
-    if (!name || !email || !password || !mobileNumber) {
+    if (!name || !email || !password || !mobileNumber || !gender) {
       return res
         .status(400)
         .json({ message: "Please fill all the required fields" });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    let user = await User.findOne({ email });
+
+    // Generate OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+    const emailTemplate = (otp) => `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+        <h2 style="color: #007bff;">Email Verification OTP</h2>
+        <p>Thank you for signing up. Please verify your email using the OTP below:</p>
+        <h3 style="font-size: 24px; color: #28a745;">${otp}</h3>
+        <p>This OTP is valid for <strong>10 minutes</strong>. Please do not share it with anyone.</p>
+        <hr/>
+        <p style="font-size: 12px; color: #777;">If you did not request this, please ignore this email.</p>
+      </div>
+    `;
+
+    if (user) {
+      if (!user.isEmailVerified) {
+        // Update OTP for email verification
+        user.emailVerificationOtp = hashedOtp;
+        user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 min
+        await user.save();
+
+        await sendEmail(email, "Verify Your Email", emailTemplate(otp));
+
+        return res.status(200).json({
+          success: true,
+          message: "Email is already registered but not verified. Verification OTP sent again.",
+        });
+      }
       return res.status(400).json({ message: "Email is already in use" });
     }
+
+    // Create new user
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
@@ -27,14 +58,17 @@ const userSignup = async (req, res, next) => {
       email,
       password: hashedPassword,
       mobileNumber,
+      gender,
+      emailVerificationOtp: hashedOtp,
+      emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 min
     });
 
     await newUser.save();
+    await sendEmail(email, "Verify Your Email", emailTemplate(otp));
 
     return res.status(200).json({
       success: true,
-      status: 200,
-      message: "User Signup Successfully",
+      message: "User Signup Successful. Verification email sent.",
       newUser,
     });
 
@@ -42,9 +76,10 @@ const userSignup = async (req, res, next) => {
     console.error("Error signing up user:", error);
     return res
       .status(500)
-      .json({ success: false, status: 500, message: "Something went wrong" });
+      .json({ success: false, message: "Something went wrong" });
   }
 };
+
 
 const verifyOtp = async (req, res) => {
   try {
@@ -80,7 +115,11 @@ const verifyOtp = async (req, res) => {
     user.emailVerificationOtp = undefined;
     user.emailVerificationExpires = undefined;
     await user.save();
-
+    global.sendNotification(
+      user._id,
+      `New User Signed up :"`,
+      "signup"
+    )
     return res
       .status(200)
       .json({ success: true, message: "Email verified successfully!" });
@@ -121,7 +160,7 @@ const login = async (req, res) => {
       maxAge: 3 * 60 * 1000,
     });
 
-    res.status(200).json({ success: true, message: "Login successful", token });
+    res.status(200).json({ success: true, message: "Login successful", token,user });
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({ success: false, message: "Internal Server Error", error });

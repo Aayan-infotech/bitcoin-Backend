@@ -35,7 +35,7 @@ const UserSchema = new Schema(
     linkedCards: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Cards",
+        ref: "Card",
       },
     ],
 

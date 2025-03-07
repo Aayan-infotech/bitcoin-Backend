@@ -7,6 +7,7 @@ const notification = require("./routes/NotificationRoutes");
 const quizRoutes = require("./routes/QuizRelated/quizRoutes");
 const courseRoutes = require("./routes/CourseRelated/CourseRoutes");
 const userRoutes = require("./routes/UserRoutes/userRoutes");
+const cardRoutes = require("./routes/PaymentRelated/CardsRoutes");
 
 router.use("/auth", authRoutes);
 router.use("/alphabet", alphabet);
@@ -15,5 +16,6 @@ router.use("/notification", notification);
 router.use("/quiz", quizRoutes);
 router.use("/course", courseRoutes);
 router.use("/user",userRoutes);
+router.use("/card",cardRoutes);
 
 module.exports = router;
