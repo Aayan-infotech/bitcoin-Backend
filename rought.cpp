@@ -17,17 +17,20 @@ void rotateArray(int arr[],int size,int step){
 
 }
 
+int largest(int arr[],int length){
+        int largestNum=arr[0];
+        for(int i=1;i <length;i++){
+                if(arr[i]>largestNum){
+                    largestNum=arr[i];
+                }
+        }
+        return largestNum;
+}
+
 int main(){
 
     int arr[]={2,3,4,5,6,68,34};
-    int n=7;
-    int d=8;
-    int step=d%n;
-
-    rotateArray(arr,n,step);
-    for (int =0;i<n;i++){
-        cout<<arr[i];
-    }
-
+   
+    cout<<"largest Number"<< largest(arr,7);
     return 0;
 }

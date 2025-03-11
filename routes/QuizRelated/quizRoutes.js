@@ -6,7 +6,7 @@ const {
   
 } = require("../../controllers/QuizRelated/QuizController");
 const { uploadToS3 } = require("../../config/s3Setup");
-const { authMiddleware } = require("../../middlewares/authMiddleware");
+const { adminAuth } = require("../../middlewares/authMiddleware");
 const {
   addQuestionsToQuiz,
   removeQuestionFromQuiz,
@@ -19,7 +19,7 @@ const router = express.Router();
 // ********************************************
 // Quiz CRUD Related Routes
 // ********************************************
-router.post("/create-quiz",uploadToS3, createQuiz);
+router.post("/create-quiz",adminAuth,uploadToS3, createQuiz);
 router.get("/get-all-quizzes",  getAllQuizzes);
 
 router.get("/get-quizById/:id", getQuizById);
