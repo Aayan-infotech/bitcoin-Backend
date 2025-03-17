@@ -214,7 +214,7 @@ const forgotPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
+  const { email, newPassword } = req.body;
 
   try {
     let user = await User.findOne({ email }).select("+password");
@@ -231,11 +231,11 @@ const resetPassword = async (req, res) => {
         .json({ success: false, message: "OTP expired or invalid" });
     }
 
-    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    // const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
-    if (hashedOtp !== user.resetPasswordOtp) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
-    }
+    // if (hashedOtp !== user.resetPasswordOtp) {
+    //   return res.status(400).json({ success: false, message: "Invalid OTP" });
+    // }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
