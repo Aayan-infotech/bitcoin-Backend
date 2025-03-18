@@ -14,6 +14,7 @@ router.get("/get-course-details/:courseId",getCourseDetails)
 router.patch("/update-course/:courseId",editCourse)
 router.patch("/update-course-status/:courseId",updateCourseStatus)
 router.delete("/delete-course/:courseId",deleteCourse)
+router.delete("/search",deleteCourse)
 // ***************************** Course CRUD Routes************************************
 
 
