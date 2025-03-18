@@ -7,6 +7,8 @@ const cors = require("cors");
 const routes = require("./routes");
 const { connectToDb } = require("./config/mongoDb");
 const setupSocket = require("./config/socket");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -25,6 +27,9 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(helmet());
+
+
 
 // 🔹 Routes
 app.use("/api", routes);

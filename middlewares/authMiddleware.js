@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 
-exports.adminAuth = async (req, res, next) => {
+exports.auth = async (req, res, next) => {
   try {
     // Extracting JWT from request cookies, body or header
     const token =

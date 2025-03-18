@@ -4,7 +4,21 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const sendEmail = require("../config/sendMail");
 const { createNotification } = require("../config/Notification");
+const { createWallet } = require("../utils/BlockChainService");
 
+
+const encryptPrivateKey = (privateKey) => {
+    const cipher = crypto.createCipher("aes-256-cbc", process.env.ENCRYPTION_SECRET);
+    let encrypted = cipher.update(privateKey, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return encrypted;
+};
+const decryptPrivateKey = (encryptedPrivateKey) => {
+  const decipher = crypto.createDecipher("aes-256-cbc", process.env.ENCRYPTION_SECRET);
+  let decrypted = decipher.update(encryptedPrivateKey, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+};
 // signup
 const userSignup = async (req, res, next) => {
   try {
@@ -50,6 +64,7 @@ const userSignup = async (req, res, next) => {
 
     // Create new user
     const hashedPassword = await bcrypt.hash(password, 10);
+    const wallet =createWallet()
 
     const newUser = new User({
       name,
@@ -57,6 +72,9 @@ const userSignup = async (req, res, next) => {
       password: hashedPassword,
       mobileNumber,
       gender,
+      wallet_address: wallet.publicKey,
+      private_key_encrypted: encryptPrivateKey(wallet.privateKey),
+  
       emailVerificationOtp: hashedOtp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 min
     });
