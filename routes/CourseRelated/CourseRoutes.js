@@ -1,22 +1,21 @@
 const { uploadToS3 } = require("../../config/s3Setup");
-const { createCourse, getCourseDetails, editCourse, getAllCourses, updateCourseStatus, deleteCourse } = require("../../controllers/CourseRelated/CourseController");
+const { createCourse, getCourseDetails, editCourse, getAllCourses, updateCourseStatus, deleteCourse, searchCourse } = require("../../controllers/CourseRelated/CourseController");
 const { updatecourseProgress, startCourse, getCoursesWithProgress } = require("../../controllers/CourseRelated/courseProgress");
 const { createSection, deleteSection, updateSection } = require("../../controllers/CourseRelated/Sections");
-const { adminAuth } = require("../../middlewares/authMiddleware");
+const { auth } = require("../../middlewares/authMiddleware");
 
 const express=require("express")
 
 const router=express.Router()
 // ***************************** Course CRUD Routes************************************
-router.post("/create-course",adminAuth,createCourse)
+router.post("/create-course",auth,createCourse)
 router.get("/get-all-courses",getAllCourses)
 router.get("/get-course-details/:courseId",getCourseDetails)
 router.patch("/update-course/:courseId",editCourse)
 router.patch("/update-course-status/:courseId",updateCourseStatus)
 router.delete("/delete-course/:courseId",deleteCourse)
-router.delete("/search",deleteCourse)
-// ***************************** Course CRUD Routes************************************
 
+router.get("/search",searchCourse)
 
 
 // ***************************** Section CRUD Routes************************************

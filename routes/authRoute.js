@@ -2,11 +2,18 @@ const express = require('express');
 const {  userSignup,login, verifyOtp, resetPassword, forgotPassword,updatePassword } = require('../controllers/authController');
 const { uploadToS3 } = require('../config/s3Setup');
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
+
+const rateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 10, // Limit to 10 requests in every 15 mins
+  message: "Too many attempts from this IP, please try again later.",
+});
 
 
-router.post('/signup',uploadToS3, userSignup);
+router.post('/signup',rateLimiter,uploadToS3, userSignup);
 router.post('/verify-otp', verifyOtp,);
-router.post('/login', login);
+router.post('/login',rateLimiter, login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/update-password", updatePassword);

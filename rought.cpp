@@ -27,10 +27,30 @@ int largest(int arr[],int length){
         return largestNum;
 }
 
+
+int selSort(int arr[],int n){
+    
+    for (int i=0;i<n-1;i++){
+        int minIndex=i;
+        for(int j=i+1;j<n;j++){
+            if(arr[j]<arr[minIndex]){
+                minIndex=j;
+            }
+        }
+        swap(arr[i]=arr[minIndex]);
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+       cout<< arr[i];
+    }
+    return 0;
+}
+
 int main(){
 
     int arr[]={2,3,4,5,6,68,34};
    
-    cout<<"largest Number"<< largest(arr,7);
+    cout<<"largest Number"<< selSort(arr,7);
     return 0;
 }

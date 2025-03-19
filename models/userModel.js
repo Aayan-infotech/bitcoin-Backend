@@ -20,8 +20,15 @@ const UserSchema = new Schema(
       default: "Student",
     },
     image: { type: String },
-    walletAddress: {
+    wallet_address: {
       type: String,
+      required:true,
+      unique:true
+    },
+    private_key_encrypted: {
+      type: String,
+      required:true,
+      unique:true
     },
     level: {
       type: String,
