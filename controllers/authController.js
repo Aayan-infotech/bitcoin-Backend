@@ -1,17 +1,39 @@
+require("dotenv").config();
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const sendEmail = require("../config/sendMail");
 const { createNotification } = require("../config/Notification");
+const { createWallet } = require("../utils/BlockChainService");
 
+const encryptPrivateKey = (privateKey) => {
+  const cipher = crypto.createCipher(
+    "aes-256-cbc",
+    process.env.ENCRYPTION_SECRET
+  );
+  let encrypted = cipher.update(privateKey, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return encrypted;
+};
+const decryptPrivateKey = (encryptedPrivateKey) => {
+  const decipher = crypto.createDecipher(
+    "aes-256-cbc",
+    process.env.ENCRYPTION_SECRET
+  );
+  let decrypted = decipher.update(encryptedPrivateKey, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+};
 // signup
 const userSignup = async (req, res, next) => {
   try {
     const { name, email, password, mobileNumber, gender } = req.body;
 
     if (!name || !email || !password || !mobileNumber || !gender) {
-      return res.status(400).json({ message: "Please fill all the required fields" });
+      return res
+        .status(400)
+        .json({ message: "Please fill all the required fields" });
     }
 
     let user = await User.findOne({ email });
@@ -42,7 +64,8 @@ const userSignup = async (req, res, next) => {
 
         return res.status(200).json({
           success: true,
-          message: "Email is already registered but not verified. Verification OTP sent again.",
+          message:
+            "Email is already registered but not verified. Verification OTP sent again.",
         });
       }
       return res.status(400).json({ message: "Email is already in use" });
@@ -50,13 +73,17 @@ const userSignup = async (req, res, next) => {
 
     // Create new user
     const hashedPassword = await bcrypt.hash(password, 10);
-
+    const wallet =await createWallet();
+    console.log(wallet, "wallet");
     const newUser = new User({
       name,
       email,
       password: hashedPassword,
       mobileNumber,
       gender,
+      wallet_address: wallet.publicKey,
+      private_key_encrypted: encryptPrivateKey(wallet.privateKey),
+
       emailVerificationOtp: hashedOtp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 min
     });
@@ -69,10 +96,11 @@ const userSignup = async (req, res, next) => {
       message: "User Signup Successful. Verification email sent.",
       newUser,
     });
-
   } catch (error) {
     console.error("Error signing up user:", error);
-    return res.status(500).json({ success: false, message: "Something went wrong" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Something went wrong" });
   }
 };
 
@@ -83,17 +111,33 @@ const verifyOtp = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
     }
 
-    if (!user.emailVerificationOtp || !user.emailVerificationExpires || user.emailVerificationExpires < Date.now()) {
-      return res.status(400).json({ success: false, message: "OTP expired. Please request a new one." });
+    if (
+      !user.emailVerificationOtp ||
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "OTP expired. Please request a new one.",
+        });
     }
 
-    const hashedOtp = crypto.createHash("sha256").update(otp.toString()).digest("hex");
+    const hashedOtp = crypto
+      .createHash("sha256")
+      .update(otp.toString())
+      .digest("hex");
 
     if (hashedOtp !== user.emailVerificationOtp) {
-      return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid OTP. Please try again." });
     }
 
     user.isEmailVerified = true;
@@ -105,14 +149,16 @@ const verifyOtp = async (req, res) => {
       global.sendNotification(user._id, "New User Signed up", "signup");
     }
 
-    return res.status(200).json({ success: true, message: "Email verified successfully!" });
-
+    return res
+      .status(200)
+      .json({ success: true, message: "Email verified successfully!" });
   } catch (error) {
     console.error("Error verifying OTP:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
-
 
 const login = async (req, res) => {
   try {
@@ -120,16 +166,22 @@ const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     if (!user.isEmailVerified) {
-      return res.status(401).json({ success: false, message: "Email not verified" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Email not verified" });
     }
 
     // Compare passwords
     if (!(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     const token = jwt.sign(
@@ -143,10 +195,14 @@ const login = async (req, res) => {
       maxAge: 3 * 60 * 1000,
     });
 
-    res.status(200).json({ success: true, message: "Login successful", token,user });
+    res
+      .status(200)
+      .json({ success: true, message: "Login successful", token, user });
   } catch (error) {
     console.error("Login Error:", error);
-    return res.status(500).json({ success: false, message: "Internal Server Error", error });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error", error });
   }
 };
 
@@ -251,7 +307,9 @@ const updatePassword = async (req, res) => {
     let user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
