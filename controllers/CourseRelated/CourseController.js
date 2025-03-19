@@ -107,6 +107,43 @@ console.log(q)
   }
 };
 
+exports.searchCourse = async (req, res) => {
+  try {
+    const { q } = req.query; 
+    console.log(q);
+    let filter = {};
+    if (q) {
+      filter = {
+        $or: [
+          { courseName: { $regex: q, $options: "i" } },
+          { courseDescription: { $regex: q, $options: "i" } },
+        ],
+      };
+    }
+    console.log(filter, "filterrr");
+
+    const courses = await Course.find(filter);
+
+    if (!courses) {
+      return res.status(201).json({
+        message: "No relevent courses found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Courses fetched successfully",
+      data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch courses",
+      error: error.message,
+    });
+  }
+};
+
 // Get course details
 exports.getCourseDetails = async (req, res) => {
   try {
@@ -138,6 +175,36 @@ exports.getCourseDetails = async (req, res) => {
     });
   }
 };
+exports.searchCourse = async (req, res) => {
+  try {
+    const { q } = req.query; // Get the search query from request parameters
+
+    let filter = {};
+    if (q) {
+      filter = {
+        $or: [
+          { name: { $regex: q, $options: "i" } }, // Case-insensitive search in course name
+          { description: { $regex: q, $options: "i" } }, // Case-insensitive search in description
+        ],
+      };
+    }
+
+    const courses = await Course.find(filter);
+
+    res.status(200).json({
+      success: true,
+      message: "Courses fetched successfully",
+      data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch courses",
+      error: error.message,
+    });
+  }
+};
+
 
 // Edit course
 exports.editCourse = async (req, res) => {
@@ -233,4 +300,5 @@ exports.updateCourseStatus = async (req, res) => {
     });
   }
 };
+
 

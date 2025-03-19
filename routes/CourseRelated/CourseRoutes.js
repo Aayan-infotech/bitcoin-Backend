@@ -14,7 +14,9 @@ router.get("/get-course-details/:courseId",getCourseDetails)
 router.patch("/update-course/:courseId",editCourse)
 router.patch("/update-course-status/:courseId",updateCourseStatus)
 router.delete("/delete-course/:courseId",deleteCourse)
+
 router.get("/search",searchCourse)
+
 
 // ***************************** Section CRUD Routes************************************
 router.post("/create-section",uploadToS3,createSection)
