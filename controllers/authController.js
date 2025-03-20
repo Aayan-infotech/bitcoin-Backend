@@ -84,7 +84,7 @@ const userSignup = async (req, res, next) => {
       gender,
       wallet_address: wallet.publicKey,
       private_key_encrypted: encryptPrivateKey(wallet.privateKey),
-      emailVerificationOtp: otp, // Store OTP in plain text
+      emailVerificationOtp: otp, 
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 min
     });
 
