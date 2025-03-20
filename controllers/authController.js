@@ -35,9 +35,8 @@ const userSignup = async (req, res, next) => {
 
     let user = await User.findOne({ email });
 
-    // Generate OTP
+    // Generate OTP (4-digit numeric)
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     const emailTemplate = (otp) => `
       <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
@@ -53,7 +52,7 @@ const userSignup = async (req, res, next) => {
     if (user) {
       if (!user.isEmailVerified) {
         // Update OTP for email verification
-        user.emailVerificationOtp = hashedOtp;
+        user.emailVerificationOtp = otp; // Store OTP as plain text
         user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 min
         await user.save();
 
@@ -61,17 +60,22 @@ const userSignup = async (req, res, next) => {
 
         return res.status(200).json({
           success: true,
-          message:
-            "Email is already registered but not verified. Verification OTP sent again.",
+          message: "Email is already registered but not verified. Verification OTP sent again.",
         });
       }
       return res.status(400).json({ message: "Email is already in use" });
     }
 
-    // Create new user
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const wallet =createWallet()
+    // Create wallet
+    const wallet = createWallet();
+    if (!wallet.publicKey || !wallet.privateKey) {
+      throw new Error("Wallet generation failed");
+    }
+
+    // Create new user
     const newUser = new User({
       name,
       email,
@@ -80,8 +84,7 @@ const userSignup = async (req, res, next) => {
       gender,
       wallet_address: wallet.publicKey,
       private_key_encrypted: encryptPrivateKey(wallet.privateKey),
-
-      emailVerificationOtp: hashedOtp,
+      emailVerificationOtp: otp, // Store OTP in plain text
       emailVerificationExpires: Date.now() + 10 * 60 * 1000, // 10 min
     });
 
@@ -93,11 +96,10 @@ const userSignup = async (req, res, next) => {
       message: "User Signup Successful. Verification email sent.",
       newUser,
     });
+
   } catch (error) {
     console.error("Error signing up user:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Something went wrong" });
+    return res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
 
@@ -108,54 +110,41 @@ const verifyOtp = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User not found" });
+      return res.status(400).json({ success: false, message: "User not found" });
     }
 
-    if (
-      !user.emailVerificationOtp ||
-      !user.emailVerificationExpires ||
-      user.emailVerificationExpires < Date.now()
-    ) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "OTP expired. Please request a new one.",
-        });
+    // Check if OTP is expired
+    if (!user.emailVerificationOtp || !user.emailVerificationExpires || user.emailVerificationExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP expired. Please request a new one." });
     }
 
-    const hashedOtp = crypto
-      .createHash("sha256")
-      .update(otp.toString())
-      .digest("hex");
+    console.log("Stored OTP:", user.emailVerificationOtp);
+    console.log("Entered OTP:", otp);
 
-    if (hashedOtp !== user.emailVerificationOtp) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid OTP. Please try again." });
+    // Compare OTPs directly
+    if (otp !== user.emailVerificationOtp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
     }
 
+    // Mark email as verified
     user.isEmailVerified = true;
     user.emailVerificationOtp = undefined;
     user.emailVerificationExpires = undefined;
     await user.save();
 
+    // Send notification (if implemented)
     if (typeof global.sendNotification === "function") {
       global.sendNotification(user._id, "New User Signed up", "signup");
     }
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Email verified successfully!" });
+    return res.status(200).json({ success: true, message: "Email verified successfully!" });
+
   } catch (error) {
     console.error("Error verifying OTP:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 const login = async (req, res) => {
   try {

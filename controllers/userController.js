@@ -55,7 +55,7 @@ const updateProfile = async (req, res) => {
 
 const getDashboardData = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -72,7 +72,7 @@ const getDashboardData = async (req, res) => {
       .limit(10);
 
     res.status(201).json({
-      message:"Details fetched successfully",
+      message: "Details fetched successfully",
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,
       last_transactions: transactions,

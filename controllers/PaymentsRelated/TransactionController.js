@@ -17,8 +17,16 @@ const getAdminPrivateKey = async () => {
     if (!data.SecretString) {
       throw new Error("SecretString is empty");
     }
+    let secrets;
+    try {
+      secrets = JSON.parse(data.SecretString);
+    } catch (parseError) {
+      throw new Error("Invalid JSON format in Secrets Manager");
+    }
 
-    const secrets = JSON.parse(data.SecretString);
+    if (!secrets.ADMIN_WALLET_PRIVATE_KEY) {
+      throw new Error("Admin private key not found in Secrets Manager");
+    }
     return secrets.ADMIN_WALLET_PRIVATE_KEY;
   } catch (err) {
     console.error("Error fetching secret:", err);
@@ -26,29 +34,48 @@ const getAdminPrivateKey = async () => {
   }
 };
 const getTransactionDetails = async (transactionHash) => {
-  const txDetails = await connection.getTransaction(transactionHash, { commitment: "confirmed" });
+  try {
+    const txDetails = await connection.getTransaction(transactionHash, { commitment: "confirmed" });
 
-  if (!txDetails) throw new Error("Transaction not found!");
+    if (!txDetails) {
+      throw new Error("Transaction not found!");
+    }
 
-  const gasFee = txDetails.meta.fee / LAMPORTS_PER_SOL; 
-  const status = txDetails.meta.err === null ? "success" : "failed"; 
+    if (!txDetails.meta) {
+      return { gasFee: 0, status: "pending" }; // Transaction is still processing
+    }
 
-  return { gasFee, status };
+    const gasFee = txDetails.meta.fee / LAMPORTS_PER_SOL;
+    const status = txDetails.meta.err === null ? "success" : "failed";
+
+    return { gasFee, status };
+  } catch (error) {
+    throw new Error(`Failed to fetch transaction details: ${error.message}`);
+  }
 };
+
 exports.sendCoins = async (req, res) => {
   try {
-    const { userId, amount } = req.body;    
-    const adminPrivateKey = await getAdminPrivateKey();    
-    const transactionHash = await sendTransaction(adminPrivateKey, userId, amount);    
-    const { gasFee, status } = await getTransactionDetails(transactionHash);    
+    const { userPublicKey, amount } = req.body;
+
+    if (!userPublicKey || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid input: userPublicKey and amount are required." });
+    }
+
+    const adminPrivateKey = await getAdminPrivateKey();
+    const transactionHash = await sendTransaction(adminPrivateKey, userPublicKey, amount);
+    const { gasFee, status } = await getTransactionDetails(transactionHash);
+
     const transaction = new Transaction({
-      userId,
+      userPublicKey,
       transactionHash,
       amount,
       gasFee,
       status,
     });
+
     await transaction.save();
+
     res.json({
       message: "Transaction successful",
       transactionHash,
@@ -60,3 +87,7 @@ exports.sendCoins = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
+
