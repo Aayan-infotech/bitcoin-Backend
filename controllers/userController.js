@@ -72,6 +72,7 @@ const getDashboardData = async (req, res) => {
       .limit(10);
 
     res.status(201).json({
+      success:true,
       message: "Details fetched successfully",
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,

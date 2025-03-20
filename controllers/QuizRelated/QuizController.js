@@ -8,8 +8,11 @@ const Course = require("../../models/CourseRelated/CourseModel");
 exports.createQuiz = async (req, res) => {
   try {
     const { title, description, timeLimit } = req.body;
-
-
+    if (!req.fileLocations[0]) {
+      return res
+        .status(402)
+        .json({ success: false, message: "issue with image" });
+    }
 
     const newQuiz = new Quiz({
       title,
@@ -46,13 +49,11 @@ exports.createQuiz = async (req, res) => {
 exports.getAllQuizzes = async (req, res) => {
   try {
     const quizzes = await Quiz.find().populate("questions");
-    res
-      .status(200)
-      .json({
-        success: true,
-        quizzes,
-        message: "Quizzes Fetched Successfully",
-      });
+    res.status(200).json({
+      success: true,
+      quizzes,
+      message: "Quizzes Fetched Successfully",
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

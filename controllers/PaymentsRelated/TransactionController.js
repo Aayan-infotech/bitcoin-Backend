@@ -1,12 +1,14 @@
 const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
-const Transaction = require("../models/Transaction");
+const Transaction = require("../../models/paymentRelated/TransactioModel");
 const { sendTransaction } = require("../../utils/BlockChainService");
-const { Connection, PublicKey } = require("@solana/web3.js");
+const { Connection, PublicKey ,LAMPORTS_PER_SOL} = require("@solana/web3.js");
 
 const connection = new Connection("https://api.mainnet-beta.solana.com");
+// const connection = new Connection("https://api.devnet.solana.com");  /* for development purpose*/
+
 
 const secretsManagerClient = new SecretsManagerClient({
-  region: "your-region",
+  region: "us-east-1",
 });
 const getAdminPrivateKey = async () => {
   try {
@@ -23,7 +25,6 @@ const getAdminPrivateKey = async () => {
     } catch (parseError) {
       throw new Error("Invalid JSON format in Secrets Manager");
     }
-
     if (!secrets.ADMIN_WALLET_PRIVATE_KEY) {
       throw new Error("Admin private key not found in Secrets Manager");
     }

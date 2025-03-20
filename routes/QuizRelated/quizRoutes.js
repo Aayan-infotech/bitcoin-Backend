@@ -23,7 +23,7 @@ const router = express.Router();
 // ********************************************
 // Quiz CRUD Related Routes
 // ********************************************
-router.post("/create-quiz", auth, uploadToS3, createQuiz);
+router.post("/create-quiz", uploadToS3, createQuiz);
 router.get("/get-all-quizzes", getAllQuizzes);
 
 router.get("/get-quizById/:id", getQuizById);
