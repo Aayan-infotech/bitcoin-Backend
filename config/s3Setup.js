@@ -1,26 +1,32 @@
-require('dotenv').config();
-const multer = require('multer');
-const { S3 } = require('@aws-sdk/client-s3');
-const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+require("dotenv").config();
+const multer = require("multer");
+const { S3 } = require("@aws-sdk/client-s3");
+const {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} = require("@aws-sdk/client-secrets-manager");
 
-// Initialize Secrets Manager Client
-const secretsManagerClient = new SecretsManagerClient({ region: process.env.AWS_REGION });
+// Initialize AWS Secrets Manager
+const secretsManagerClient = new SecretsManagerClient({
+  region: process.env.AWS_REGION,
+});
 
-// Fetch AWS Credentials from Secrets Manager
+// Fetch AWS credentials from Secrets Manager
 const getAwsCredentials = async () => {
   try {
-    const command = new GetSecretValueCommand({ SecretId: 'aayan-config' });
+    const command = new GetSecretValueCommand({ SecretId: "aws-secret" });
     const data = await secretsManagerClient.send(command);
 
     if (data.SecretString) {
       const secret = JSON.parse(data.SecretString);
       return {
-        accessKeyId: secret.AWS_ACCESS_KEY_ID,
-        secretAccessKey: secret.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: secret.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey:
+          secret.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
       };
     }
   } catch (error) {
-    console.error('Error fetching secrets:', error);
+    throw new Error("Failed to retrieve AWS credentials");
   }
 };
 
@@ -28,7 +34,6 @@ const getAwsCredentials = async () => {
 const getS3Client = async () => {
   try {
     const credentials = await getAwsCredentials();
-
     return new S3({
       credentials: {
         accessKeyId: credentials.accessKeyId,
@@ -37,19 +42,15 @@ const getS3Client = async () => {
       region: process.env.AWS_REGION,
     });
   } catch (error) {
-    console.error('Error initializing S3:', error.message);
     throw error;
   }
 };
 
-// Configure Multer (Memory Storage)
+// Configure Multer (to accept FormData)
 const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  limits: { fileSize:50 * 1024 * 1024 }, // 5MB file size limit
-}).array('files', 5); // Allows multiple files
+const upload = multer({ storage }).array("files", 5); // Accepts multiple files
 
-// Middleware for Uploading Files to S3 (Always Calls Next)
+// Middleware for Uploading Files to S3
 const uploadToS3 = async (req, res, next) => {
   upload(req, res, async (err) => {
     if (err) {
@@ -57,7 +58,7 @@ const uploadToS3 = async (req, res, next) => {
     }
 
     if (!req.files || req.files.length === 0) {
-      req.fileLocations = []; // No files uploaded, but move to next
+      req.fileLocations = [];
       return next();
     }
 
@@ -81,8 +82,7 @@ const uploadToS3 = async (req, res, next) => {
       req.fileLocations = fileLocations;
       next();
     } catch (uploadError) {
-      console.error('S3 upload error:', uploadError);
-      return res.status(500).json({ error: uploadError.message });
+      return res.status(500).send(uploadError.message);
     }
   });
 };
