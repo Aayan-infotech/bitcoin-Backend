@@ -5,8 +5,8 @@ const router = express.Router();
 const rateLimit = require("express-rate-limit");
 
 const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 mins
-  max: 10, // Limit to 10 requests in every 15 mins
+  windowMs: 15 * 60 * 1000, 
+  max: 10, 
   message: "Too many attempts from this IP, please try again later.",
 });
 

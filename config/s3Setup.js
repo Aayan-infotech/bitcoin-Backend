@@ -26,7 +26,10 @@ const getAwsCredentials = async () => {
       };
     }
   } catch (error) {
-    throw new Error("Failed to retrieve AWS credentials");
+    return res.status(403).json({
+      success: false,
+      message: "Failed while fetching credentials",
+    });
   }
 };
 
@@ -42,15 +45,16 @@ const getS3Client = async () => {
       region: process.env.AWS_REGION,
     });
   } catch (error) {
-    throw error;
+    return res.status(403).json({
+      success: false,
+      message: "Failed while fetching credentials",
+    });
   }
 };
 
-// Configure Multer (to accept FormData)
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).array("files", 5); // Accepts multiple files
+const upload = multer({ storage }).array("files", 5); 
 
-// Middleware for Uploading Files to S3
 const uploadToS3 = async (req, res, next) => {
   upload(req, res, async (err) => {
     if (err) {

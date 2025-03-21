@@ -1,30 +1,26 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/userModel");
 
 exports.auth = async (req, res, next) => {
   try {
     const token =
       req.cookies.token ||
       req.body.token ||
-      req.header("Authorization").replace("Bearer ", "");
+      req.header("Authorization")?.replace("Bearer ", "");
+
     if (!token) {
-      return res.status(401).json({ success: false, message: `Token Missing` });
+      return res.status(401).json({ success: false, message: "Token missing" });
     }
 
     try {
-      const decode = await jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decode;
-    } catch (error) {
-      return res
-        .status(401)
-        .json({ success: false, message: "token is invalid" });
+      req.user = jwt.verify(token, process.env.JWT_SECRET);
+      next();
+    } catch {
+      return res.status(401).json({ success: false, message: "Invalid token" });
     }
-
-    next();
-  } catch (error) {
-    return res.status(401).json({
+  } catch {
+    return res.status(500).json({
       success: false,
-      message: `Something Went Wrong While Validating the Token`,
+      message: "Error validating token",
     });
   }
 };

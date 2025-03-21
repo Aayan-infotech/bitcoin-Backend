@@ -51,7 +51,6 @@ const userSignup = async (req, res, next) => {
 
     if (user) {
       if (!user.isEmailVerified) {
-        // Update OTP for email verification otp
         user.emailVerificationOtp = otp; // Store OTP as plain text
         user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 min
         await user.save();
@@ -98,8 +97,7 @@ const userSignup = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error("Error signing up user:", error);
-    return res.status(500).json({ success: false, message: "Something went wrong" });
+    return res.status(500).json({ success: false,error, message: "Something went wrong" });
   }
 };
 
@@ -118,9 +116,6 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP expired. Please request a new one." });
     }
 
-    console.log("Stored OTP:", user.emailVerificationOtp);
-    console.log("Entered OTP:", otp);
-
     // Compare OTPs directly
     if (otp !== user.emailVerificationOtp) {
       return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
@@ -132,7 +127,6 @@ const verifyOtp = async (req, res) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    // Send notification (if implemented)
     if (typeof global.sendNotification === "function") {
       global.sendNotification(user._id, "New User Signed up", "signup");
     }
@@ -140,8 +134,7 @@ const verifyOtp = async (req, res) => {
     return res.status(200).json({ success: true, message: "Email verified successfully!" });
 
   } catch (error) {
-    console.error("Error verifying OTP:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false,error, message: "Internal server error" });
   }
 };
 

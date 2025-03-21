@@ -9,16 +9,17 @@ exports.createNotification = async (userId, title, message, type = "info") => {
       type,
     });
 
-    
-    // Emit real-time notification (if using Socket.io)
     if (global.io) {
-        await notification.save();
-        console.log(global.io)
-        global.io.to(userId.toString()).emit("newNotification", notification);
+      await notification.save();
+      console.log(global.io);
+      global.io.to(userId.toString()).emit("newNotification", notification);
     }
 
     return notification;
   } catch (error) {
-    console.error("Error creating notification:", error);
+    return res.status(403).json({
+      success: false,
+      message: "Failed while performing the operation",
+    });
   }
 };

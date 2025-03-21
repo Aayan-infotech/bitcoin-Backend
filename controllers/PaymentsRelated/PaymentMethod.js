@@ -10,7 +10,6 @@ exports.addCards = async (req, res) => {
       return res.status(400).json({ message: "Invalid input" });
     }
 
-    // Store last 4 digits only for security
     const last4Digits = cardNumber ? cardNumber.slice(-4) : null;
 
     const newCard = new Card({
@@ -23,7 +22,7 @@ exports.addCards = async (req, res) => {
     });
 
     await newCard.save();
-    const userData = User.findByIdAndUpdate(
+    User.findByIdAndUpdate(
       userId,
       {
         $push: { linkedCards: newCard._id },

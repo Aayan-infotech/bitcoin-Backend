@@ -44,7 +44,6 @@ const updateProfile = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error("Error updating profile:", error);
     return res.status(500).json({
       success: false,
       message: "Error occurred while updating user profile",
@@ -72,15 +71,14 @@ const getDashboardData = async (req, res) => {
       .limit(10);
 
     res.status(201).json({
-      success:true,
+      success: true,
       message: "Details fetched successfully",
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,
       last_transactions: transactions,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch dashboard data" });
+    return res.status(500).json({ error: "Failed to fetch dashboard data" ,err});
   }
 };
 

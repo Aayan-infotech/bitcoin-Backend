@@ -45,9 +45,7 @@ exports.submitQuizAnswers = async (req, res) => {
         .json({ success: false, message: "Quiz not found" });
     }
 
-    // Ensure totalQuestions is at least 1 to avoid division by zero
     const totalQuestions = Math.max(quiz.questions.length, 1);
-    // Create a map of questionId -> correctAnswer for O(1) lookup
     const correctAnswersMap = new Map(
       quiz.questions.map((q) => [q._id.toString(), q.correctAnswer])
     );
@@ -59,7 +57,6 @@ exports.submitQuizAnswers = async (req, res) => {
         : acc;
     }, 0);
 
-    // Calculate percentage (fix division by zero)
     const percentage = ((score / totalQuestions) * 100).toFixed(2);
 
     // Store the user's attempt
@@ -100,7 +97,6 @@ exports.getUserAttempts = async (req, res) => {
   }
 };
 
-// Get leaderboard (Top 10 users by score)
 exports.getLeaderboard = async (req, res) => {
   try {
     const leaderboard = await QuizAttempt.find()

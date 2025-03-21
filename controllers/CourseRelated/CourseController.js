@@ -24,7 +24,7 @@ exports.createCourse = async (req, res) => {
       courseName,
       courseDescription,
       instructor: instructor._id,
-      // thumbnail: thumbnail,
+      thumbnail: req.fileLocations[0],
       status: status || "Draft",
     });
 
@@ -73,7 +73,7 @@ exports.getAllCourses = async (req, res) => {
 exports.searchCourse = async (req, res) => {
   try {
     const { q } = req.query; // Get the search query from request parameters
-console.log(q)
+
     let filter = {};
     if (q) {
       filter = {
@@ -83,8 +83,6 @@ console.log(q)
         ],
       };
     }
-    console.log(filter,"filterrr")
-
     const courses = await Course.find(filter);
 
     if(!courses){
@@ -110,7 +108,6 @@ console.log(q)
 exports.searchCourse = async (req, res) => {
   try {
     const { q } = req.query; 
-    console.log(q);
     let filter = {};
     if (q) {
       filter = {
@@ -148,9 +145,8 @@ exports.searchCourse = async (req, res) => {
 exports.getCourseDetails = async (req, res) => {
   try {
     const { courseId } = req.params;
-    // Find the course and populate instructor & courseContent (which further populates Sections)
     const courseDetails = await Course.findById(courseId)
-      .populate("instructor", "name email") // Populate instructor with selected fields
+      .populate("instructor", "name email")
       .populate({
         path: "courseContent",
         model: "Section",

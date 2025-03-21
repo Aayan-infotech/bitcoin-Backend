@@ -5,17 +5,14 @@ exports.addQuestionsToQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
     const { questions } = req.body;
-    // Validate questions array
     if (!Array.isArray(questions) || questions.length === 0) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid questions array" });
     }
 
-    // Create new questions
     const createdQuestions = await Question.insertMany(questions);
 
-    // Extract question IDs
     const questionIds = createdQuestions.map((q) => q._id);
 
     // Update the quiz with new questions
@@ -48,7 +45,6 @@ exports.removeQuestionFromQuiz = async (req, res) => {
   try {
     const { quizId, questionId } = req.body; // Get IDs from request params
 
-    // Find the quiz and update by pulling the questionId from the questions array
     const updatedQuiz = await Quiz.findByIdAndUpdate(
       quizId,
       { $pull: { questions: questionId } }, // Remove the questionId from the array
@@ -132,10 +128,9 @@ exports.deleteQuestion = async (req, res) => {
         .json({ success: false, message: "Question not found" });
     }
 
-    // Remove the question from any quiz that contains it
     await Quiz.updateMany(
-      { questions: questionId }, // Find all quizzes that reference this question
-      { $pull: { questions: questionId } } // Remove the question reference
+      { questions: questionId }, 
+      { $pull: { questions: questionId } } 
     );
 
     res.status(200).json({

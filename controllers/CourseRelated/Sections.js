@@ -18,12 +18,11 @@ exports.createSection = async (req, res) => {
 
     const newSection = await Section.create({
       title,
-      timeDuration: timeDuration, // Default if no duration available
+      timeDuration: timeDuration,
       description,
-      videoUrl: videoUrl || "file.url", // Default URL if no video
+      videoUrl: videoUrl || "file.url", 
     });
 
-    // Find the course and update its courseContent array
     const course = await Course.findById(courseId);
     if (!course) {
       return res
@@ -49,7 +48,6 @@ exports.createSection = async (req, res) => {
       data: newSection,
     });
   } catch (error) {
-    console.error("Error creating new section:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -90,7 +88,6 @@ exports.updateSection = async (req, res) => {
       message: "Section updated successfully",
     });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({
       success: false,
       message: "An error occurred while updating the section",
@@ -102,7 +99,6 @@ exports.deleteSection = async (req, res) => {
   try {
     const { sectionId } = req.params; // Get sectionId from URL params
 
-    // Step 1: Find the course containing this section
     const course = await Course.findOne({ courseContent: sectionId });
 
     if (!course) {
@@ -111,13 +107,11 @@ exports.deleteSection = async (req, res) => {
         .json({ success: false, message: "Course not found for this section" });
     }
 
-    // Step 2: Remove the section ID from courseContent array
     course.courseContent = course.courseContent.filter(
       (id) => id.toString() !== sectionId
     );
     await course.save();
 
-    // Step 3: Delete the section from the database
     await Section.findByIdAndDelete(sectionId);
 
     return res.status(200).json({
@@ -125,7 +119,6 @@ exports.deleteSection = async (req, res) => {
       message: "Section deleted and removed from course successfully",
     });
   } catch (error) {
-    console.error("Error deleting section:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",

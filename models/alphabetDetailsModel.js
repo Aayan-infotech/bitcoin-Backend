@@ -18,7 +18,6 @@ const AlphabetDescription=new mongoose.Schema({
     },
     image:{
         type:String,
-        // required:true,
     },
     examples:{
         type:String,

@@ -22,8 +22,7 @@ exports.createAlphabet = async (req, res) => {
       alphabet: newAlphabet,
     });
   } catch (error) {
-    console.log(error)
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message ,message:"Error while creating Alphabet"});
   }
 };
 
@@ -37,7 +36,7 @@ exports.getAllAlphabets = async (req, res) => {
       data: alphabets,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message  ,message:"Error while getting Alphabet"});
   }
 };
 
@@ -54,7 +53,7 @@ exports.getAlphabetById = async (req, res) => {
       data: alphabet,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message  ,message:"Error while getting an Alphabet"});
   }
 };
 
@@ -81,7 +80,7 @@ exports.updateAlphabet = async (req, res) => {
       data: updatedAlphabet,
     });
   } catch (error) {
-    res.status(400).json({ success: false, error: error });
+    res.status(400).json({ success: false, error: error ,message:"Error while updating Alphabet" });
   }
 };
 
@@ -94,6 +93,6 @@ exports.deleteAlphabet = async (req, res) => {
 
     res.json({ success: true, message: "Alphabet deleted successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message, message:"Error while deleting Alphabet" });
   }
 };

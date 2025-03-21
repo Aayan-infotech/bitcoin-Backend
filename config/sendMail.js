@@ -3,12 +3,11 @@ require("dotenv").config(); // Load environment variables
 
 const sendEmail = async (to, subject, html) => {
   try {
-    // Create transporter
     const transporter = nodemailer.createTransport({
-      service: "gmail", // Use "outlook", "yahoo", or SMTP server if needed
+      service: "gmail", 
       auth: {
-        user: process.env.EMAIL_USER, // Your email address
-        pass: process.env.EMAIL_PASS, // Your email app password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS, 
       },
       tls:{
         rejectUnauthorized: false
@@ -23,10 +22,13 @@ const sendEmail = async (to, subject, html) => {
       html,
     };
 
-    // Send email
-    const info = await transporter.sendMail(mailOptions);
+  await transporter.sendMail(mailOptions);
   } catch (error) {
     console.error("Error sending email:", error);
+    return res.status(403).json({
+      success: false,
+      message: "Failed while sending email",
+    });
   }
 };
 

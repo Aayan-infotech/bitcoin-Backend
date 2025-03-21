@@ -1,7 +1,7 @@
 const { Server } = require("socket.io");
 const Notification = require("../models/Notification");
 
-const connectedUsers = {}; // Store online users
+const connectedUsers = {}; 
 
 const setupSocket = (server) => {
   const io = new Server(server, {
@@ -12,15 +12,13 @@ const setupSocket = (server) => {
 
   io.on("connection", (socket) => {
 
-    // Register user socket connection
     socket.on("register", (data) => {
       if (data.event === "register") {
-        const { userId } = data; // Extract userId from data object
+        const { userId } = data; 
         connectedUsers[userId] = socket.id;
       }
     });
 
-    // Handle user disconnect
     socket.on("disconnect", () => {
       for (const [key, value] of Object.entries(connectedUsers)) {
         if (value === socket.id) {
@@ -46,7 +44,6 @@ const setupSocket = (server) => {
     }
   };
 
-  // Expose sendNotification globally
   global.sendNotification = sendNotification;
 };
 

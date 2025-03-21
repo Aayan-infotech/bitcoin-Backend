@@ -9,7 +9,7 @@ exports.createFAQ = async (req, res) => {
 
       return  res.status(201).json({message:"FAQ Created Successfully",success:true,savedData});
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message,success:false,message:"Error with creating FAQ" });
     }
 };
 
@@ -19,7 +19,7 @@ exports.getAllFAQs = async (req, res) => {
         const faqs = await FAQ.find({});
         res.json({message:"FAQ fetched Successfully",faqs});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({  error: error.message,success:false,message:"Error with getting FAQ" });
     }
 };
 
@@ -30,7 +30,7 @@ exports.getFAQById = async (req, res) => {
         if (!faq) return res.status(404).json({ error: "FAQ not found" });
         res.json(faq);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({  error: error.message,success:false,message:"Error with creating FAQ" });
     }
 };
 

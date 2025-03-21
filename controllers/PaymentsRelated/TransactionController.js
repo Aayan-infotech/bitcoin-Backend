@@ -29,9 +29,12 @@ const getAdminPrivateKey = async () => {
       throw new Error("Admin private key not found in Secrets Manager");
     }
     return secrets.ADMIN_WALLET_PRIVATE_KEY;
-  } catch (err) {
-    console.error("Error fetching secret:", err);
-    throw new Error("Failed to fetch admin private key");
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message: "error while getting private key",
+      error,
+    });
   }
 };
 const getTransactionDetails = async (transactionHash) => {
@@ -51,7 +54,11 @@ const getTransactionDetails = async (transactionHash) => {
 
     return { gasFee, status };
   } catch (error) {
-    throw new Error(`Failed to fetch transaction details: ${error.message}`);
+    return res.status(403).json({
+      success: false,
+      message: "error while getting private key",
+      error,
+    });
   }
 };
 
@@ -84,8 +91,11 @@ exports.sendCoins = async (req, res) => {
       status,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(403).json({
+      success: false,
+      message: "error while sending coin",
+      err,
+    });
   }
 };
 

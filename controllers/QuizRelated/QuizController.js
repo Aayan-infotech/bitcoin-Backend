@@ -10,9 +10,7 @@ exports.createQuiz = async (req, res) => {
     const { title, description, timeLimit } = req.body;
     if (!req.fileLocations[0]) {
       return res
-        .status(402
-
-        )
+        .status(402)
         .json({ success: false, message: "issue with image" });
     }
 
