@@ -7,7 +7,7 @@ exports.createCourse = async (req, res) => {
   try {
     const userId = req.user.id;
     const { courseName, courseDescription, status } = req.body;
-
+            
     if (!courseName || !courseDescription) {
       return res
         .status(400)
@@ -30,7 +30,7 @@ exports.createCourse = async (req, res) => {
 
     // instructor.courses.push(newCourse._id);
     await instructor.save();
-    const allUsers = await User.find({}, "_id"); // Fetch all users
+    const allUsers = await User.find({}, "_id"); 
     allUsers.forEach((user) =>
       global.sendNotification(
         user._id,

@@ -51,7 +51,7 @@ const userSignup = async (req, res, next) => {
 
     if (user) {
       if (!user.isEmailVerified) {
-        // Update OTP for email verification
+        // Update OTP for email verification otp
         user.emailVerificationOtp = otp; // Store OTP as plain text
         user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 min
         await user.save();

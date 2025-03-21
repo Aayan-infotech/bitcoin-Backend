@@ -81,7 +81,7 @@ exports.updateAlphabet = async (req, res) => {
       data: updatedAlphabet,
     });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(400).json({ success: false, error: error });
   }
 };
 

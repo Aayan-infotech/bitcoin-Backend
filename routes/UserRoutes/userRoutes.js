@@ -6,6 +6,7 @@ const router=express.Router()
 
 router.get("/get-all-user",getAllUsers)
 router.patch("/update-profile/:id",uploadToS3,updateProfile)
+// router.post("/verification-reminder/:userId",sendVerificationEmail)
 router.get("/get-user-dashboard",auth,getDashboardData)
 
 module.exports=router

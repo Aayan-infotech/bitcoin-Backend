@@ -74,20 +74,33 @@ void maxOnes(int nums[])
     int currentCount = 0;
     for (int i = 0; i < n; i++)
     {
-        if(nums[i]==0){
-            if(currentCount>maxCount){
-                maxCount=currentCount;
+        if (nums[i] == 0)
+        {
+            if (currentCount > maxCount)
+            {
+                maxCount = currentCount;
             }
-            currentCount=0;
+            currentCount = 0;
         }
-        if(nums[i]==1){
-                currentCount++;
+        if (nums[i] == 1)
+        {
+            currentCount++;
         }
     }
-    if(currentCount>maxCount){
-            maxCount=currentCount;
+    if (currentCount > maxCount)
+    {
+        maxCount = currentCount;
     }
     return maxCount;
+}
+
+int single(int arr[], int n)
+{
+    int xorEl = 0;
+    for (int i = 0; i < n; i++)
+    {
+        xorEl = xorEl ^ arr[i];
+    }
 }
 
 int main()
