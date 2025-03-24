@@ -69,13 +69,13 @@ const getDashboardData = async (req, res) => {
     const transactions = await Transaction.find({ userId })
       .sort({ createdAt: -1 })
       .limit(10);
-
+    user.wallet_balance= balanceSOL;
+    user.last_transactions= transactions;
     res.status(201).json({
       success: true,
       message: "Details fetched successfully",
-      wallet_address: user.wallet_address,
-      wallet_balance: balanceSOL,
-      last_transactions: transactions,
+      user,
+   
     });
   } catch (err) {
     return res.status(500).json({ error: "Failed to fetch dashboard data" ,err});
