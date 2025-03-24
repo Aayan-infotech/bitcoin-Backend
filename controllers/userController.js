@@ -69,17 +69,28 @@ const getDashboardData = async (req, res) => {
     const transactions = await Transaction.find({ userId })
       .sort({ createdAt: -1 })
       .limit(10);
-    user.wallet_balance= balanceSOL;
-    user.last_transactions= transactions;
-    res.status(201).json({
+
+    // Create a new object instead of modifying `user`
+    const responseData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      wallet_address: user.wallet_address,
+      wallet_balance: balanceSOL,
+      last_transactions: transactions,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    res.status(200).json({
       success: true,
       message: "Details fetched successfully",
-      user,
-   
+      user: responseData,
     });
   } catch (err) {
-    return res.status(500).json({ error: "Failed to fetch dashboard data" ,err});
+    return res.status(500).json({ error: "Failed to fetch dashboard data", err });
   }
 };
+
 
 module.exports = { getAllUsers, updateProfile, getDashboardData };
