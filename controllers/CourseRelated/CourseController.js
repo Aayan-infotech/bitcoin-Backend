@@ -35,7 +35,7 @@ exports.createCourse = async (req, res) => {
       global.sendNotification(
         user._id,
         `A new course "${courseName}" has been added.`,
-        "course"
+        "promotional"
       )
     );
 

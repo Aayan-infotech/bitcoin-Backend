@@ -27,7 +27,7 @@ exports.createQuiz = async (req, res) => {
       global.sendNotification(
         user._id,
         `A new Quiz "${title}" has been added.`,
-        "quiz"
+        "promotional"
       )
     );
 

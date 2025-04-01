@@ -69,7 +69,7 @@ exports.submitQuizAnswers = async (req, res) => {
     });
 
     await quizAttempt.save();
-    global.sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "course")
+    global.sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "promotional")
     
 
     res.status(200).json({

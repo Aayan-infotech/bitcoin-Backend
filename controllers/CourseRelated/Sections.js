@@ -38,7 +38,7 @@ exports.createSection = async (req, res) => {
       global.sendNotification(
         user._id,
         `A new section "${title}" has been added to the "${course.courseName}"`,
-        "course"
+        "promotional"
       )
     );
 

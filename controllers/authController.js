@@ -128,7 +128,7 @@ const verifyOtp = async (req, res) => {
     await user.save();
 
     if (typeof global.sendNotification === "function") {
-      global.sendNotification(user._id, "New User Signed up", "signup");
+      global.sendNotification(user._id, "New User Signed up", "security");
     }
 
     return res.status(200).json({ success: true, message: "Email verified successfully!" });
@@ -166,7 +166,7 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "3h" }
+      { expiresIn: "7d" }
     );
 
     res.cookie("token", token, {
@@ -264,8 +264,8 @@ const resetPassword = async (req, res) => {
 
     global.sendNotification(
       user._id,
-      `Your Password has been successfully changed on ${Date.now().toLocaleString()}`,
-      "course"
+      `Your Password has been successfully changed on ${new Date(Date.now()).toLocaleString()}`,
+      "security"
     );
 
     return res
@@ -305,7 +305,7 @@ const updatePassword = async (req, res) => {
     global.sendNotification(
       user._id,
       `Your Password has been successfully updated on ${Date.now().toLocaleString()}`,
-      "course"
+      "security"
     );
 
     return res.status(200).json({
