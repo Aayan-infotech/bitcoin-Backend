@@ -293,7 +293,7 @@ const updatePassword = async (req, res) => {
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res.status(402).json({
+      return res.status(401).json({
         success: false,
         message: "Your old password does not match the existing password",
       });
