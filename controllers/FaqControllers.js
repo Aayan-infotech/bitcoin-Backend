@@ -5,7 +5,7 @@ exports.createFAQ = async (req, res) => {
     const {question,answer}=req.body
     try {
         const faq = new FAQ({question,answer});
-       const savedData= await faq.save();
+       const savedData= await faq.save()
 
       return  res.status(201).json({message:"FAQ Created Successfully",success:true,savedData});
     } catch (error) {
