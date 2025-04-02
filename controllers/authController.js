@@ -220,7 +220,7 @@ const forgotPassword = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      otp,
+      // otp,
       message: "Password reset OTP sent to your registered email.",
     });
   } catch (error) {
