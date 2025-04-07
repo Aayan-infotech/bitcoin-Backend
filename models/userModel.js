@@ -70,6 +70,12 @@ const UserSchema = new Schema(
 
     resetPasswordOtp: { type: String },
     resetPasswordExpires: { type: Date },
+    notificationPreferences: {
+      security: { type: Boolean, default: true },
+      promotional: { type: Boolean, default: false },
+      transaction: { type: Boolean, default: true },
+      ads: { type: Boolean, default: false }
+    }     
   },
   { timestamps: true }
 );

@@ -93,7 +93,7 @@ const userSignup = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "User Signup Successful. Verification email sent.",
-      newUser,
+      // newUser,
     });
 
   } catch (error) {
