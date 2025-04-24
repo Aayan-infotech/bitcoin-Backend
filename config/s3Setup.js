@@ -12,7 +12,7 @@ const secretsManagerClient = new SecretsManagerClient({
 });
 
 // Fetch AWS credentials from Secrets Manager
-const getAwsCredentials = async () => {
+const getAwsCredentials = async (req,res) => {
   try {
     const command = new GetSecretValueCommand({ SecretId: "aws-secret" });
     const data = await secretsManagerClient.send(command);
