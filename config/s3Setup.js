@@ -8,7 +8,7 @@ const {
 
 // Initialize AWS Secrets Manager
 const secretsManagerClient = new SecretsManagerClient({
-  region: process.env.AWS_REGION,
+  region:'us-east-1',
 });
 
 // Fetch AWS credentials from Secrets Manager
@@ -43,7 +43,7 @@ const getS3Client = async (req,res) => {
         accessKeyId: credentials.accessKeyId,
         secretAccessKey: credentials.secretAccessKey,
       },
-      region: process.env.AWS_REGION,
+      region:'us-east-1',
     });
   } catch (error) {
     console.log(error)
