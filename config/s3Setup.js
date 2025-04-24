@@ -14,8 +14,11 @@ const secretsManagerClient = new SecretsManagerClient({
 // Fetch AWS credentials from Secrets Manager
 const getAwsCredentials = async (req,res) => {
   try {
+    console.log(111);
+    
     const command = new GetSecretValueCommand({ SecretId: "aws-secret" });
     const data = await secretsManagerClient.send(command);
+    console.log(222,data);
 
     if (data.SecretString) {
       const secret = JSON.parse(data.SecretString);
@@ -26,7 +29,7 @@ const getAwsCredentials = async (req,res) => {
       };
     }
   } catch (error) {
-    console.log(error)
+    console.log(333,error)
     return res.status(403).json({
       success: false,
       message: error.message,
