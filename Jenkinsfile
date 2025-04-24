@@ -1,14 +1,16 @@
-pipeline {
+kpipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "docker.io/aayanindia/bitcoin-backend"
+        IMAGE_NAME = "docker.io/aayanindia/bitcoin-back"
         CONTAINER_PORT = "3210"
         HOST_PORT = "3210"
         DOCKER_HUB_USERNAME = credentials('docker-hub-username')
         DOCKER_HUB_PASSWORD = credentials('docker-hub-password')
-        EMAIL_RECIPIENTS = "anurag.yadav@aayaninfotech.com"
+        EMAIL_RECIPIENTS = "ujjwal.singh@aayaninfotech.com"
         SONARTOKEN = credentials('sonartoken')
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
 
     stages {
@@ -39,9 +41,9 @@ pipeline {
                         -v $(pwd):/usr/src \
                         --network host \
                         sonarsource/sonar-scanner-cli:latest \
-                        -Dsonar.projectKey=bitcoin-back \
+                        -Dsonar.projectKey=bitcoin-ecom-back \
                         -Dsonar.sources=/usr/src \
-                        -Dsonar.host.url=http://54.236.98.193:9000 \
+                        -Dsonar.host.url=http://3.223.253.106:9000 \
                         -Dsonar.login=${SONARTOKEN}
                     '''
                 }
@@ -68,7 +70,7 @@ pipeline {
                 script {
                     def latestTag = sh(
                         script: '''
-                        curl -s https://hub.docker.com/v2/repositories/aayanindia/bitcoin-backend/tags/ | \
+                        curl -s https://hub.docker.com/v2/repositories/aayanindia/handy-frontend/tags/ | \
                         jq -r '.results[].name' | grep -E '^stage-v[0-9]+$' | sort -V | tail -n1 | awk -F'v' '{print $2}'
                         ''',
                         returnStdout: true
@@ -128,20 +130,18 @@ pipeline {
             }
         }
 
-       stage('Run New Docker Container') {
+        stage('Push Docker Image to Docker Hub') {
             steps {
                 script {
                     sh '''
-                    echo "Starting new container with latest image..."
-                    docker run -d \
-                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                        -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1
+                    echo "Pushing Docker images to Docker Hub..."
+                    docker push ${IMAGE_NAME}:${NEW_STAGE_TAG}
+                    docker push ${IMAGE_NAME}:prodv1
                     '''
                 }
             }
         }
-    }
+
         stage('Stop Existing Container') {
             steps {
                 script {
@@ -164,7 +164,10 @@ pipeline {
                 script {
                     sh '''
                     echo "Starting new container with latest image..."
-                    docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1
+                    docker run -d \
+                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                        -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1
                     '''
                 }
             }
@@ -188,7 +191,7 @@ pipeline {
                     """,
                     to: "${EMAIL_RECIPIENTS}",
                     from: "development.aayanindia@gmail.com",
-                    replyTo: "anurag.yadav@aayaninfotech.com",
+                    replyTo: "ujjwal.singh@aayaninfotech.com",
                     mimeType: 'text/html'
                 )
             }
@@ -211,10 +214,11 @@ pipeline {
                     attachLog: true,
                     to: "${EMAIL_RECIPIENTS}",
                     from: "development.aayanindia@gmail.com",
-                    replyTo: "anurag.yadav@aayaninfotech.com",
+                    replyTo: "ujjwal.singh@aayaninfotech.com",
                     mimeType: 'text/html'
                 )
             }
         }
     }
 }
+
