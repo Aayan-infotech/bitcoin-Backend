@@ -524,4 +524,35 @@ Jenkinsfile  app.js     [01;34mcontrollers[0m  loki-config.yaml    [01;34mmod
 [1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
 [1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
 [1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
-[1;35r[32;9Hstage('Tag Docker Image') {[?25l[34;16H[20X[34;36H(B[0;7mM-D(B[m DOS Format  [34;61H          (B[0;7mM-A(B[m Append[18X[34;108H(B[0;7mB(B[m Backup File[K[35;2H(B[0;7mC(B[m Cancel[16G[20X[35;36H(B[0;7mM-M(B[m Mac Format    [61G          (B[0;7mM-P(B[m Prepend[17X[35;106H(B[0;7m^T(B[m Browse[K[33d(B[0;7mFile Name to Write: Jenkinsfile                                                                                                               [33;32H(B[m[?12l[?25h[?25l[33;64H[1K (B[0;7m[ Writing... ](B[m[K[1;81H(B[0;7m [141G(B[m[33;62H(B[0;7m[ Wrote 224 lines ](B[m[34;16H(B[0;7m^O(B[m Write Out   (B[0;7m^W(B[m Where Is    (B[0;7m^K(B[m Cut[34;61H(B[0;7m^T(B[m Execute     (B[0;7m^C(B[m Location    (B[0;7mM-U(B[m Undo[34;108H(B[0;7mA(B[m Set Mark   (B[0;7mM-](B[m To Bracket[35;2H(B[0;7mX(B[m Exit  [16G(B[0;7m^R(B[m Read File   (B[0;7m^\(B[m Replace     (B[0;7m^U(B[m Paste[61G(B[0;7m^J(B[m Justify     (B[0;7m^/(B[m Go To Line  (B[0;7mM-E(B[m Redo[106G(B[0;7mM-6(B[m Copy [121G(B[0;7m^Q(B[m Where Was[?12l[?25h[32;36H[?25l[33d[J[35d[?12l[?25h[35;1H[
+[1;35r[32;9Hstage('Tag Docker Image') {[?25l[34;16H[20X[34;36H(B[0;7mM-D(B[m DOS Format  [34;61H          (B[0;7mM-A(B[m Append[18X[34;108H(B[0;7mB(B[m Backup File[K[35;2H(B[0;7mC(B[m Cancel[16G[20X[35;36H(B[0;7mM-M(B[m Mac Format    [61G          (B[0;7mM-P(B[m Prepend[17X[35;106H(B[0;7m^T(B[m Browse[K[33d(B[0;7mFile Name to Write: Jenkinsfile                                                                                                               [33;32H(B[m[?12l[?25h[?25l[33;64H[1K (B[0;7m[ Writing... ](B[m[K[1;81H(B[0;7m [141G(B[m[33;62H(B[0;7m[ Wrote 224 lines ](B[m[34;16H(B[0;7m^O(B[m Write Out   (B[0;7m^W(B[m Where Is    (B[0;7m^K(B[m Cut[34;61H(B[0;7m^T(B[m Execute     (B[0;7m^C(B[m Location    (B[0;7mM-U(B[m Undo[34;108H(B[0;7mA(B[m Set Mark   (B[0;7mM-](B[m To Bracket[35;2H(B[0;7mX(B[m Exit  [16G(B[0;7m^R(B[m Read File   (B[0;7m^\(B[m Replace     (B[0;7m^U(B[m Paste[61G(B[0;7m^J(B[m Justify     (B[0;7m^/(B[m Go To Line  (B[0;7mM-E(B[m Redo[106G(B[0;7mM-6(B[m Copy [121G(B[0;7m^Q(B[m Where Was[?12l[?25h[32;36H[?25l[33d[J[35d[?12l[?25h[35;1H[?1049l[23;0;0t[?1l>[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ sudo nano Jenkinsfile [3Pcd bitcoin-Backend/[Kat Jenkinsfile ls[Kcd cartspeedtestbackend/[K[1Plegsudo docker ps -a[Klg[K[K[Kgit add .
+[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ git commit -m "fix cred issue"
+[?2004l[cred 6fb80a0] fix cred issue
+ Committer: Ubuntu <ubuntu@ip-172-31-40-144.ec2.internal>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 547 insertions(+), 16 deletions(-)
+ create mode 100644 {
+[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ git push origin cred
+[?2004lUsername for 'https://github.com': AtulRajput01
+Password for 'https://AtulRajput01@github.com': 
+Enumerating objects: 6, done.
+Counting objects:  16% (1/6)Counting objects:  33% (2/6)Counting objects:  50% (3/6)Counting objects:  66% (4/6)Counting objects:  83% (5/6)Counting objects: 100% (6/6)Counting objects: 100% (6/6), done.
+Delta compression using up to 16 threads
+Compressing objects:  25% (1/4)Compressing objects:  50% (2/4)Compressing objects:  75% (3/4)Compressing objects: 100% (4/4)Compressing objects: 100% (4/4), done.
+Writing objects:  25% (1/4)Writing objects:  50% (2/4)Writing objects:  75% (3/4)Writing objects: 100% (4/4)Writing objects: 100% (4/4), 6.29 KiB | 6.29 MiB/s, done.
+Total 4 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas:   0% (0/2)[Kremote: Resolving deltas:  50% (1/2)[Kremote: Resolving deltas: 100% (2/2)[Kremote: Resolving deltas: 100% (2/2), completed with 2 local objects.[K
+To https://github.com/Aayan-infotech/bitcoin-Backend.git
+   5c08582..6fb80a0  cred -> cred
+[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ git push origin cred[Ksudo nano Jenkinsfile 
+[?2004l[?2004h[?1049h[22;0;0t[1;35r(B[m[4l[?7h[39;49m[?1h=[?1h=[?25l[39;49m(B[m[H[2J[33;65H(B[0;7m[ Reading... ](B[m[33;63H(B[0;7m[ Read 224 lines ](B[m[H(B[0;7m  GNU nano 7.2                                                      Jenkinsfile                                                               [1;141H(B[m[34d(B[0;7m^G(B[m Help[34;16H(B[0;7m^O(B[m Write Out   (B[0;7m^W(B[m Where Is    (B[0;7m^K(B[m Cut[34;61H(B[0;7m^T(B[m Execute     (B[0;7m^C(B[m Location    (B[0;7mM-U(B[m Undo[106G(B[0;7mM-A(B[m Set Mark   (B[0;7mM-](B[m To Bracket[35d(B[0;7m^X(B[m Exit[35;16H(B[0;7m^R(B[m Read File   (B[0;7m^\(B[m Replace     (B[0;7m^U(B[m Paste[61G(B[0;7m^J(B[m Justify     (B[0;7m^/(B[m Go To Line  (B[0;7mM-E(B[m Redo[106G(B[0;7mM-6(B[m Copy[121G(B[0;7m^Q(B[m Where Was[2dkpipeline {[3;5Hagent any[5;5Henvironment {[6;9HIMAGE_NAME = "docker.io/aayanindia/bitcoin-back"[7;9HCONTAINER_PORT = "3210"[8;9HHOST_PORT = "3210"[9;9HDOCKER_HUB_USERNAME = credentials('docker-hub-username')[10;9HDOCKER_HUB_PASSWORD = credentials('docker-hub-password')[11;9HEMAIL_RECIPIENTS = "ujjwal.singh@aayaninfotech.com"[12;9HSONARTOKEN = credentials('sonartoken')[13;9HAWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')[14;9HAWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')[15;5H}[17dstages {[18;9Hstage('Checkout') {[19;13Hsteps {[20;17Hscript {[21;21Hche
