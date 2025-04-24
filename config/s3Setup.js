@@ -23,9 +23,8 @@ const getAwsCredentials = async (req,res) => {
     if (data.SecretString) {
       const secret = JSON.parse(data.SecretString);
       return {
-        accessKeyId: secret.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey:
-          secret.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: secret.AWS_ACCESS_KEY_ID,
+        secretAccessKey:secret.AWS_SECRET_ACCESS_KEY,
       };
     }
   } catch (error) {
@@ -52,7 +51,7 @@ const getS3Client = async (req,res) => {
     console.log(error)
     return res.status(403).json({
       success: false,
-      message: "Failed while fetching credentials",
+      message:error.message,
     });
   }
 };
