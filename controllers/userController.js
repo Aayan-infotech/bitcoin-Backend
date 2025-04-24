@@ -22,7 +22,7 @@ const getAllUsers = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.params.id;
-    const image = req.fileLocations[0];
+    const image = req?.fileLocations[0];
     const { mobileNumber, name, gender } = req.body;
 
     const user = await User.findById(userId);
