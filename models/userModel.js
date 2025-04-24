@@ -14,11 +14,6 @@ const UserSchema = new Schema(
       type: String,
       enum: ["Male", "Female", "Other"],
     },
-    userType: {
-      type: String,
-      enum: ["Student", "Salaried","Admin","Self Employed"],
-      default: "Student",
-    },
     image: { type: String },
     wallet_address: {
       type: String,

@@ -6,7 +6,7 @@ const connection = new Connection("https://api.mainnet-beta.solana.com");
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ userType: "Student" });
+    const users = await User.find();
     return res.status(200).json({
       success: true,
       message: "Users fetched Successfully",
@@ -76,7 +76,6 @@ const getDashboardData = async (req, res) => {
       name: user.name,
       email: user.email,
       gender: user.gender,
-      userType: user.userType,
       mobileNumber: user.mobileNumber,
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,
