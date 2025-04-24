@@ -165,14 +165,25 @@ exports.getCourseProgressForUser = async (req, res) => {
     const progress = await courseProgress.findOne({ userId, courseId });
 
     let progressPercentage = "New Course";
+    let completedVideoIds = [];
 
     if (progress) {
-      const completedCount = progress.completedVideos.length;
+      completedVideoIds = progress.completedVideos || [];
+      const completedCount = completedVideoIds.length;
       progressPercentage =
         totalSections > 0
           ? `${((completedCount / totalSections) * 100).toFixed(2)}%`
           : "100%";
     }
+
+    // Build section list with completion status
+    const sections = course.courseContent.map((section) => ({
+      sectionId: section._id,
+      title: section.title,
+      videoUrl:section.videoUrl,
+      duration: convertSecondsToDuration(section.timeDuration),
+      isCompleted: completedVideoIds.includes(section._id.toString()),
+    }));
 
     const response = {
       courseId: course._id,
@@ -180,6 +191,7 @@ exports.getCourseProgressForUser = async (req, res) => {
       totalSections,
       progressPercentage,
       totalDuration: convertSecondsToDuration(totalDurationInSeconds),
+      sections,
     };
 
     return res.status(200).json({ success: true, course: response });
@@ -190,4 +202,5 @@ exports.getCourseProgressForUser = async (req, res) => {
       .json({ success: false, message: "Error fetching course progress", error });
   }
 };
+
 
