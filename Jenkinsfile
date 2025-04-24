@@ -128,18 +128,20 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image to Docker Hub') {
+       stage('Run New Docker Container') {
             steps {
                 script {
                     sh '''
-                    echo "Pushing Docker images to Docker Hub..."
-                    docker push ${IMAGE_NAME}:${NEW_STAGE_TAG}
-                    docker push ${IMAGE_NAME}:prodv1
+                    echo "Starting new container with latest image..."
+                    docker run -d \
+                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                        -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1
                     '''
                 }
             }
         }
-
+    }
         stage('Stop Existing Container') {
             steps {
                 script {
