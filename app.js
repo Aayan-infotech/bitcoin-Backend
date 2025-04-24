@@ -10,7 +10,6 @@ const setupSocket = require("./config/socket");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const multer = require("multer");
-const upload = multer();
 
 const PORT = process.env.PORT || 3000;
 const  app = express();
@@ -27,7 +26,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 
-app.use(upload.any());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
