@@ -14,11 +14,9 @@ const secretsManagerClient = new SecretsManagerClient({
 // Fetch AWS credentials from Secrets Manager
 const getAwsCredentials = async (req,res) => {
   try {
-    console.log(111);
     
     const command = new GetSecretValueCommand({ SecretId: "aws-secret" });
     const data = await secretsManagerClient.send(command);
-    console.log(222,data);
 
     if (data.SecretString) {
       const secret = JSON.parse(data.SecretString);
@@ -28,7 +26,6 @@ const getAwsCredentials = async (req,res) => {
       };
     }
   } catch (error) {
-    console.log(333,error)
     return res.status(403).json({
       success: false,
       message: error.message,
@@ -48,7 +45,6 @@ const getS3Client = async (req,res) => {
       region:'us-east-1',
     });
   } catch (error) {
-    console.log(error)
     return res.status(403).json({
       success: false,
       message:error.message,
@@ -90,8 +86,6 @@ const uploadToS3 = async (req, res, next) => {
       req.fileLocations = fileLocations;
       next();
     } catch (uploadError) {
-      console.log(uploadError)
-
       return res.status(500).send(uploadError.message);
     }
   });
