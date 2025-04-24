@@ -80,6 +80,7 @@ const getDashboardData = async (req, res) => {
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,
       last_transactions: transactions,
+      userProfile:user.image,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
