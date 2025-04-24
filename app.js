@@ -13,7 +13,7 @@ const multer = require("multer");
 const upload = multer();
 
 const PORT = process.env.PORT || 3000;
-const app = express();
+const  app = express();
 const server = http.createServer(app); // Create an HTTP server
 
 // 🔹 CORS Configuration
