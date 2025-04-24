@@ -26,6 +26,7 @@ const getAwsCredentials = async (req,res) => {
       };
     }
   } catch (error) {
+    console.log(error)
     return res.status(403).json({
       success: false,
       message: "Failed while fetching credentials",
@@ -45,6 +46,7 @@ const getS3Client = async (req,res) => {
       region: process.env.AWS_REGION,
     });
   } catch (error) {
+    console.log(error)
     return res.status(403).json({
       success: false,
       message: "Failed while fetching credentials",
@@ -86,6 +88,8 @@ const uploadToS3 = async (req, res, next) => {
       req.fileLocations = fileLocations;
       next();
     } catch (uploadError) {
+      console.log(uploadError)
+
       return res.status(500).send(uploadError.message);
     }
   });
