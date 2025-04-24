@@ -29,7 +29,7 @@ const getAwsCredentials = async (req,res) => {
     console.log(error)
     return res.status(403).json({
       success: false,
-      message: "Failed while fetching credentials",
+      message: error.message,
     });
   }
 };
