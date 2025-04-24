@@ -34,7 +34,7 @@ const getAwsCredentials = async () => {
 };
 
 // Initialize S3 Client
-const getS3Client = async () => {
+const getS3Client = async (req,res) => {
   try {
     const credentials = await getAwsCredentials();
     return new S3({
