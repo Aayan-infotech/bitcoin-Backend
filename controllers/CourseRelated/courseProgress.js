@@ -142,3 +142,52 @@ exports.getCoursesWithProgress = async (req, res) => {
       .json({ success: false, message: "Error fetching courses", error });
   }
 };
+exports.getCourseProgressForUser = async (req, res) => {
+  try {
+    const { userId, courseId } = req.params;
+
+    // Fetch the specific course with populated content
+    const course = await Course.findById(courseId).populate("courseContent");
+
+    if (!course) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
+    }
+
+    const totalSections = course.courseContent.length;
+    const totalDurationInSeconds = course.courseContent.reduce(
+      (acc, section) => acc + parseInt(section.timeDuration || 0),
+      0
+    );
+
+    // Get user progress for this course
+    const progress = await courseProgress.findOne({ userId, courseId });
+
+    let progressPercentage = "New Course";
+
+    if (progress) {
+      const completedCount = progress.completedVideos.length;
+      progressPercentage =
+        totalSections > 0
+          ? `${((completedCount / totalSections) * 100).toFixed(2)}%`
+          : "100%";
+    }
+
+    const response = {
+      courseId: course._id,
+      courseName: course.courseName,
+      totalSections,
+      progressPercentage,
+      totalDuration: convertSecondsToDuration(totalDurationInSeconds),
+    };
+
+    return res.status(200).json({ success: true, course: response });
+  } catch (error) {
+    console.error("Error fetching course progress:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Error fetching course progress", error });
+  }
+};
+

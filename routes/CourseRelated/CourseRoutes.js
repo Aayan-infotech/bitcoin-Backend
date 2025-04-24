@@ -1,6 +1,6 @@
 const { uploadToS3 } = require("../../config/s3Setup");
 const { createCourse, getCourseDetails, editCourse, getAllCourses, updateCourseStatus, deleteCourse, searchCourse } = require("../../controllers/CourseRelated/CourseController");
-const { updatecourseProgress, startCourse, getCoursesWithProgress } = require("../../controllers/CourseRelated/courseProgress");
+const { updatecourseProgress, startCourse, getCoursesWithProgress, getCourseProgressForUser } = require("../../controllers/CourseRelated/courseProgress");
 const { createSection, deleteSection, updateSection } = require("../../controllers/CourseRelated/Sections");
 const { auth } = require("../../middlewares/authMiddleware");
 
@@ -30,7 +30,8 @@ router.delete("/delete-section/:sectionId",deleteSection)
 
 router.post("/start-course", startCourse);
 router.post("/update-progress",updatecourseProgress)
-router.get("/get-user-course-progress/:userId",getCoursesWithProgress)
+router.get("/get-user-course-progress/:userId/:courseId",getCourseProgressForUser)
+// router.get("/get-user-course-progress/:userId",getCoursesWithProgress)
 
 
 
