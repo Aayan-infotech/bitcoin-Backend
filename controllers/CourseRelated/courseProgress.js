@@ -181,6 +181,7 @@ exports.getCourseProgressForUser = async (req, res) => {
       sectionId: section._id,
       title: section.title,
       videoUrl:section.videoUrl,
+      description:section.description
       duration: convertSecondsToDuration(section.timeDuration),
       isCompleted: completedVideoIds.includes(section._id.toString()),
     }));
