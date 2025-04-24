@@ -1,0 +1,527 @@
+Script started on 2025-04-24 13:59:51+05:30 [TERM="xterm-256color" TTY="/dev/pts/2" COLUMNS="142" LINES="35"]
+[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ cd 
+[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~[00m$ cd cartspeedtestbackend/
+[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~/cartspeedtestbackend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/cartspeedtestbackend[00m$ ls
+[?2004lDockerfile   README.md  [0m[01;34mconfig[0m       docker-compose.yml  [01;34mmiddleware[0m  [01;34mnode_modules[0m       package.json  [01;34mutils[0m
+Jenkinsfile  app.js     [01;34mcontrollers[0m  loki-config.yaml    [01;34mmodels[0m      package-lock.json  [01;34mroutes[0m        [01;34mvalidators[0m
+[?2004h]0;ubuntu@ip-172-31-40-144: ~/cartspeedtestbackend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/cartspeedtestbackend[00m$ cat JE[Kenkinsfile 
+[?2004lpipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "docker.io/aayanindia/cart-back"
+        CONTAINER_PORT = "9090"
+        HOST_PORT = "9090"
+        DOCKER_HUB_USERNAME = credentials('docker-hub-username')
+        DOCKER_HUB_PASSWORD = credentials('docker-hub-password')
+        EMAIL_RECIPIENTS = "ujjwal.singh@aayaninfotech.com"
+        SONARTOKEN = credentials('sonartoken')
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    checkout scm
+                }
+            }
+        }
+
+        stage('Run ESLint') {
+            steps {
+                script {
+                    sh '''
+                    echo "Running ESLint..."
+                    npm run lint || echo "⚠️ ESLint completed with errors, but continuing pipeline..."
+                    '''
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    sh '''
+                    echo "Running SonarQube analysis using Docker..."
+                    docker run --rm \
+                        -v $(pwd):/usr/src \
+                        --network host \
+                        sonarsource/sonar-scanner-cli:latest \
+                        -Dsonar.projectKey=social-ecom-back \
+                        -Dsonar.sources=/usr/src \
+                        -Dsonar.host.url=http://3.223.253.106:9000 \
+                        -Dsonar.login=${SONARTOKEN}
+                    '''
+                }
+            }
+        }
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    sh '''
+                    echo "Logging in to Docker Hub..."
+                    if echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin; then
+                        echo "✅ Docker Hub login successful!"
+                    else
+                        echo "❌ ERROR: Docker Hub login failed! Check credentials in Jenkins."
+                        exit 1
+                    fi
+                    '''
+                }
+            }
+        }
+
+        stage('Generate Next Image Tag') {
+            steps {
+                script {
+                    def latestTag = sh(
+                        script: '''
+                        curl -s https://hub.docker.com/v2/repositories/aayanindia/handy-frontend/tags/ | \
+                        jq -r '.results[].name' | grep -E '^stage-v[0-9]+$' | sort -V | tail -n1 | awk -F'v' '{print $2}'
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    def newTag = latestTag ? "stage-v${latestTag.toInteger() + 1}" : "stage-v1"
+                    env.NEW_STAGE_TAG = newTag
+                    echo "🆕 New Docker Image Tag: ${newTag}"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def buildResult = sh(
+                        script: '''#!/bin/bash
+                        set -eo pipefail
+                        echo "Building Docker image..."
+                        docker build -t ${IMAGE_NAME}:latest . 2>&1 | tee failure.log
+                        ''',
+                        returnStatus: true
+                    )
+
+                    if (buildResult != 0) {
+                        error "❌ Docker build failed! Check failure.log"
+                    }
+                }
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                script {
+                    sh '''
+                    echo "Tagging Docker image..."
+                    docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${NEW_STAGE_TAG}
+                    docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:prodv1
+                    '''
+                }
+            }
+        }
+
+        stage('Security Scan with Trivy') {
+            steps {
+                script {
+                    sh '''
+                    echo "Running Trivy security scan..."
+                    if docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image \
+                        --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}:${NEW_STAGE_TAG}; then
+                        echo "✅ Trivy scan completed!"
+                    else
+                        echo "⚠️ Trivy scan found vulnerabilities, but continuing pipeline..."
+                    fi
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                script {
+                    sh '''
+                    echo "Pushing Docker images to Docker Hub..."
+                    docker push ${IMAGE_NAME}:${NEW_STAGE_TAG}
+                    docker push ${IMAGE_NAME}:prodv1
+                    '''
+                }
+            }
+        }
+
+        stage('Stop Existing Container') {
+            steps {
+                script {
+                    sh '''
+                    echo "Stopping existing container..."
+                    CONTAINER_ID=$(docker ps -q --filter "publish=${HOST_PORT}")
+                    if [ -n "$CONTAINER_ID" ]; then
+                        docker stop "$CONTAINER_ID" || true
+                        docker rm "$CONTAINER_ID" || true
+                    else
+                        echo "No container running on port ${HOST_PORT}"
+                    fi
+                    '''
+                }
+            }
+        }
+
+        stage('Run New Docker Container') {
+            steps {
+                script {
+                    sh '''
+                    echo "Starting new container with latest image..."
+                    docker run -d \
+                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                        -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "📩 Sending deployment email..."
+                emailext (
+                    subject: "🚀 Pipeline Status: ${currentBuild.currentResult} (Build #${BUILD_NUMBER})",
+                    body: """
+                    <html>
+                    <body>
+                    <p><strong>Pipeline Status:</strong> ${currentBuild.currentResult}</p>
+                    <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                    <p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>
+                    </body>
+                    </html>
+                    """,
+                    to: "${EMAIL_RECIPIENTS}",
+                    from: "development.aayanindia@gmail.com",
+                    replyTo: "ujjwal.singh@aayaninfotech.com",
+                    mimeType: 'text/html'
+                )
+            }
+        }
+
+        failure {
+            script {
+                echo "❌ Sending failure email with logs..."
+                emailext (
+                    subject: "🚨 Deployment Failed (Build #${BUILD_NUMBER})",
+                    body: """
+                    <html>
+                    <body>
+                    <p><strong>❌ Deployment Failed</strong></p>
+                    <p><strong>Logs:</strong> Attached below.</p>
+                    <p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>
+                    </body>
+                    </html>
+                    """,
+                    attachLog: true,
+                    to: "${EMAIL_RECIPIENTS}",
+                    from: "development.aayanindia@gmail.com",
+                    replyTo: "ujjwal.singh@aayaninfotech.com",
+                    mimeType: 'text/html'
+                )
+            }
+        }
+    }
+}
+[?2004h]0;ubuntu@ip-172-31-40-144: ~/cartspeedtestbackend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/cartspeedtestbackend[00m$ cd
+[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~[00m$ cd bitcoin-Backend/
+[?2004l[?2004h]0;ubuntu@ip-172-31-40-144: ~/bitcoin-Backend[01;32mubuntu@ip-172-31-40-144[00m:[01;34m~/bitcoin-Backend[00m$ ls[K[Ksudo nnao Jenkinsfile [C[1P[C[1@n
+[?2004l[?2004h[?1049h[22;0;0t[1;35r(B[m[4l[?7h[39;49m[?1h=[?1h=[?25l[39;49m(B[m[H[2J[33;65H(B[0;7m[ Reading... ](B[m[33;63H(B[0;7m[ Read 220 lines ](B[m[H(B[0;7m  GNU nano 7.2                                                      Jenkinsfile                                                               [1;141H(B[m[34d(B[0;7m^G(B[m Help[34;16H(B[0;7m^O(B[m Write Out   (B[0;7m^W(B[m Where Is    (B[0;7m^K(B[m Cut[34;61H(B[0;7m^T(B[m Execute     (B[0;7m^C(B[m Location    (B[0;7mM-U(B[m Undo[106G(B[0;7mM-A(B[m Set Mark   (B[0;7mM-](B[m To Bracket[35d(B[0;7m^X(B[m Exit[35;16H(B[0;7m^R(B[m Read File   (B[0;7m^\(B[m Replace     (B[0;7m^U(B[m Paste[61G(B[0;7m^J(B[m Justify     (B[0;7m^/(B[m Go To Line  (B[0;7mM-E(B[m Redo[106G(B[0;7mM-6(B[m Copy[121G(B[0;7m^Q(B[m Where Was[2dpipeline {[3;5Hagent any[5;5Henvironment {[6;9HIMAGE_NAME = "docker.io/aayanindia/bitcoin-backend"[7;9HCONTAINER_PORT = "3210"[8;9HHOST_PORT = "3210"[9;9HDOCKER_HUB_USERNAME = credentials('docker-hub-username')[10;9HDOCKER_HUB_PASSWORD = credentials('docker-hub-password')[11;9HEMAIL_RECIPIENTS = "anurag.yadav@aayaninfotech.com"[12;9HSONARTOKEN = credentials('sonartoken')[13;5H}[15dstages {[16;9Hstage('Checkout') {[17;13Hsteps {[18;17Hscript {[19;21Hcheckout scm[20;17H}[21;13H}[22;9H}[24dstage('Run ESLint') {[25;13Hsteps {[26;17Hscript {[27;21Hsh '''[28;21Hecho "Running ESLint..."[29;21Hnpm run lint || echo "⚠️ ESLint completed with errors, but continuing pipeline..."[30;21H'''[31;17H}[32;13H}[2d[?12l[?25h[?25l[1;81H(B[0;7m*[141G(B[m[2;33r[33;1H
+[1;35r[32;9H}[K[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('SonarQube Analysis') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Running SonarQube analysis using Docker..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdocker run --rm \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-v $(pwd):/usr/src \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H--network host \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hsonarsource/sonar-scanner-cli:latest \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-Dsonar.projectKey=bitcoin-back \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-Dsonar.sources=/usr/src \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-Dsonar.host.url=[94mhttp://54.236.98.193:9000[39m(B[m \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-Dsonar.login=${SONARTOKEN}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Login to Docker Hub') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Logging in to Docker Hub..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hif echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin; then[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "✅ Docker Hub login successful!"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Helse[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "❌ ERROR: Docker Hub login failed! Check credentials in Jenkins."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hexit 1[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hfi[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Generate Next Image Tag') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdef latestTag = sh([2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hscript: '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hcurl -s [94mhttps://hub.docker.com/v2/repositories/aayanindia/bitcoin-backend/tags/[39m(B[m | \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hjq -r '.results[].name' | grep -E '^stage-v[0-9]+$' | sort -V | tail -n1 | awk -F'v' '{print $2}'[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H''',[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25HreturnStdout: true[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H).trim()[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdef newTag = latestTag ? "stage-v${latestTag.toInteger() + 1}" : "stage-v1"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Henv.NEW_STAGE_TAG = newTag[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "🆕 New Docker Image Tag: ${newTag}"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Build Docker Image') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdef buildResult = sh([2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hscript: '''#!/bin/bash[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hset -eo pipefail[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "Building Docker image..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hdocker build -t ${IMAGE_NAME}:latest . 2>&1 | tee failure.log[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H''',[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25HreturnStatus: true[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H)[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hif (buildResult != 0) {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Herror "❌ Docker build failed! Check failure.log"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Tag Docker Image') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Tagging Docker image..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdocker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${NEW_STAGE_TAG}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdocker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:prodv1[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Security Scan with Trivy') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Running Trivy security scan..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hif docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H--exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}:${NEW_STAGE_TAG}; then[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "✅ Trivy scan completed!"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Helse[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "⚠️ Trivy scan found vulnerabilities, but continuing pipeline..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hfi[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;8Hstage('Run New Docker Container') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Starting new container with latest image..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdocker run -d \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25H-p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;5H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Stop Existing Container') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Stopping existing container..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HCONTAINER_ID=$(docker ps -q --filter "publish=${HOST_PORT}")[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hif [ -n "$CONTAINER_ID" ]; then[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hdocker stop "$CONTAINER_ID" || true[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hdocker rm "$CONTAINER_ID" || true[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Helse[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;25Hecho "No container running on port ${HOST_PORT}"[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hfi[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hstage('Run New Docker Container') {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hsteps {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsh '''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hecho "Starting new container with latest image..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hdocker run -d -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H'''[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;5H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;5Hpost {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Halways {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hecho "📩 Sending deployment email..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hemailext ([2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsubject: "🚀 Pipeline Status: ${currentBuild.currentResult} (Build #${BUILD_NUMBER})",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hbody: """[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<html>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<body>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>Pipeline Status:</strong> ${currentBuild.currentResult}</p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H</body>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H</html>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H""",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hto: "${EMAIL_RECIPIENTS}",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hfrom: "development.aayanindia@gmail.com",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HreplyTo: "anurag.yadav@aayaninfotech.com",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HmimeType: 'text/html'[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H)[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9Hfailure {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13Hscript {[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hecho "❌ Sending failure email with logs..."[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17Hemailext ([2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hsubject: "🚨 Deployment Failed (Build #${BUILD_NUMBER})",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hbody: """[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<html>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<body>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>❌ Deployment Failed</strong></p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>Logs:</strong> Attached below.</p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H<p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H</body>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H</html>[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21H""",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HattachLog: true,[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hto: "${EMAIL_RECIPIENTS}",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21Hfrom: "development.aayanindia@gmail.com",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HreplyTo: "anurag.yadav@aayaninfotech.com",[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;21HmimeType: 'text/html'[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;17H)[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;13H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;9H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;5H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[32;1H}[2d[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[2;33r[33;1H
+[1;35r[2;1H[?12l[?25h[?25l[K[?12l[?25h[?25l[33;62H(B[0;7m[ Nothing was cut ](B[m[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[33;81H[?12l[?25h[2d[?25l[?12l[?25hk[?25l[2;20H[1K <p><strong>Logs:</strong> Attached below.</p>[3;21H<p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>[4;21H</body>[5;21H</html>[6;21H""",[7;21HattachLog: true,[8;21Hto: "${EMAIL_RECIPIENTS}",[9;21Hfrom: "development.aayanindia@gmail.com",[10;21HreplyTo: "ujjwal.singh@aayaninfotech.com",[11;21HmimeType: 'text/html'[12;17H)[13;13H}[14;9H}[15;5H}[16d}[33d[K[17d[?12l[?25h[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h7[2;33r8M[1;35r[2;21H<p><strong>❌ Deployment Failed</strong></p>[?25l[?12l[?25h7[2;33r8M[1;35r[2;21H<body>[?25l[?12l[?25h7[2;33r8M[1;35r[2;21H<html>[?25l[?12l[?25h7[2;33r8M[1;35r[2;21Hbody: """[?25l[?12l[?25h7[2;33r8M[1;35r[2;21Hsubject: "🚨 Deployment Failed (Build #${BUILD_NUMBER})",[?25l[?12l[?25h7[2;33r8M[1;35r[2;17Hemailext ([?25l[?12l[?25h7[2;33r8M[1;35r[2;17Hecho "❌ Sending failure email with logs..."[?25l[?12l[?25h7[2;33r8M[1;35r[2;13Hscript {[?25l[?12l[?25h7[2;33r8M[1;35r[2;9Hfailure {[?25l[?12l[?25h7[2;33r8M[1;35r[2;1H[?25l[?12l[?25h7[2;33r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;33r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;33r8M[1;35r[2;17H)[?25l[?12l[?25h7[2;33r8M[1;35r[2;21HmimeType: 'text/html'[?25l[?12l[?25h7[2;33r8M[1;35r[2;21HreplyTo: "ujjwal.singh@aayaninfotech.com",[?25l[?12l[?25h7[2;33r8M[1;35r[2;21Hfrom: "development.aayanindia@gmail.com",[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hto: "${EMAIL_RECIPIENTS}",[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H""",[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H</html>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H</body>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H<p><strong>Check the <a href="${BUILD_URL}">console output</a>.</strong></p>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H<p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H<p><strong>Pipeline Status:</strong> ${currentBuild.currentResult}</p>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H<body>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H<html>[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hbody: """[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsubject: "🚀 Pipeline Status: ${currentBuild.currentResult} (Build #${BUILD_NUMBER})",[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hemailext ([?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hecho "📩 Sending deployment email..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Halways {[?25l[?12l[?25h7[2;32r8M[1;35r[2;5Hpost {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;5H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:prodv1[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \[?25l[?12l[?25h7[2;33r8M[1;35r[2;25H-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker run -d \[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Starting new container with latest image..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Run New Docker Container') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hfi[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "No container running on port ${HOST_PORT}"[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Helse[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hdocker rm "$CONTAINER_ID" || true[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hdocker stop "$CONTAINER_ID" || true[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hif [ -n "$CONTAINER_ID" ]; then[?25l[?12l[?25h7[2;32r8M[1;35r[2;21HCONTAINER_ID=$(docker ps -q --filter "publish=${HOST_PORT}")[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Stopping existing container..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;33r8M[1;35r[2;9Hstage('Stop Existing Container') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker push ${IMAGE_NAME}:prodv1[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker push ${IMAGE_NAME}:${NEW_STAGE_TAG}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Pushing Docker images to Docker Hub..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Push Docker Image to Docker Hub') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;33r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hfi[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "⚠️ Trivy scan found vulnerabilities, but continuing pipeline..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Helse[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "✅ Trivy scan completed!"[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H--exit-code 0 --severity HIGH,CRITICAL ${IMAGE_NAME}:${NEW_STAGE_TAG}; then[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hif docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image \[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Running Trivy security scan..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Security Scan with Trivy') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;33r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:prodv1[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${NEW_STAGE_TAG}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Tagging Docker image..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Tag Docker Image') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;33r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Herror "❌ Docker build failed! Check failure.log"[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hif (buildResult != 0) {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H)[?25l[?12l[?25h7[2;32r8M[1;35r[2;25HreturnStatus: true[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H''',[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hdocker build -t ${IMAGE_NAME}:latest . 2>&1 | tee failure.log[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "Building Docker image..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hset -eo pipefail[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hscript: '''#!/bin/bash[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdef buildResult = sh([?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Build Docker Image') {[?25l[?12l[?25h7[2;33r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "🆕 New Docker Image Tag: ${newTag}"[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Henv.NEW_STAGE_TAG = newTag[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdef newTag = latestTag ? "stage-v${latestTag.toInteger() + 1}" : "stage-v1"[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H).trim()[?25l[?12l[?25h7[2;32r8M[1;35r[2;25HreturnStdout: true[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H''',[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hjq -r '.results[].name' | grep -E '^stage-v[0-9]+$' | sort -V | tail -n1 | awk -F'v' '{print $2}'[?25l[?12l[?25h7[2;33r8M[1;35r[2;25Hcurl -s [94mhttps://hub.docker.com/v2/repositories/aayanindia/handy-frontend/tags/[39m(B[m | \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hscript: '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdef latestTag = sh([?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Generate Next Image Tag') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;33r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hfi[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hexit 1[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "❌ ERROR: Docker Hub login failed! Check credentials in Jenkins."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Helse[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hecho "✅ Docker Hub login successful!"[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hif echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin; then[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Logging in to Docker Hub..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;33r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Login to Docker Hub') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;33r8M[1;35r[2;25H-Dsonar.login=${SONARTOKEN}[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-Dsonar.host.url=[94mhttp://3.223.253.106:9000[39m(B[m \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-Dsonar.sources=/usr/src \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-Dsonar.projectKey=social-ecom-back \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25Hsonarsource/sonar-scanner-cli:latest \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H--network host \[?25l[?12l[?25h7[2;32r8M[1;35r[2;25H-v $(pwd):/usr/src \[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hdocker run --rm \[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Running SonarQube analysis using Docker..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;33r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('SonarQube Analysis') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21H'''[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hnpm run lint || echo "⚠️ ESLint completed with errors, but continuing pipeline..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hecho "Running ESLint..."[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hsh '''[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Run ESLint') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;9H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;13H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;17H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;21Hcheckout scm[?25l[?12l[?25h7[2;32r8M[1;35r[2;17Hscript {[?25l[?12l[?25h7[2;32r8M[1;35r[2;13Hsteps {[?25l[?12l[?25h7[2;32r8M[1;35r[2;9Hstage('Checkout') {[?25l[?12l[?25h7[2;32r8M[1;35r[2;5Hstages {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;5H}[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HAWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HAWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HSONARTOKEN = credentials('sonartoken')[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HEMAIL_RECIPIENTS = "ujjwal.singh@aayaninfotech.com"[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HDOCKER_HUB_PASSWORD = credentials('docker-hub-password')[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HDOCKER_HUB_USERNAME = credentials('docker-hub-username')[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HHOST_PORT = "9090"[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HCONTAINER_PORT = "9090"[?25l[?12l[?25h7[2;32r8M[1;35r[2;9HIMAGE_NAME = "docker.io/aayanindia/cart-back"[?25l[?12l[?25h7[2;32r8M[1;35r[2;5Henvironment {[?25l[?12l[?25h7[2;32r8M[1;35r[2;1H[?25l[?12l[?25h7[2;32r8M[1;35r[2;5Hagent any[?25l[?12l[?25h7[2;32r8M[1;35r[2;1Hkpipeline {[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25hk[?25l[?12l[?25hp[?25l[?12l[?25hi[?25l[?12l[?25hp[?25l[?12l[?25he[?25l[?12l[?25hl[?25l[?12l[?25hi[?25l[?12l[?25hn[?25l[?12l[?25he[?25l[?12l[?25h [?25l[?12l[?25h{[?25l[?12l[?25h[3d[?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25ha[?25l[?12l[?25hg[?25l[?12l[?25he[?25l[?12l[?25hn[?25l[?12l[?25ht[?25l[?12l[?25h [?25l[?12l[?25ha[?25l[?12l[?25hn[?25l[?12l[?25hy[?25l[?12l[?25h[4d[?25l[?12l[?25h[5d[?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25he[?25l[?12l[?25hn[?25l[?12l[?25hv[?25l[?12l[?25hi[?25l[?12l[?25hr[?25l[?12l[?25ho[?25l[?12l[?25hn[?25l[?12l[?25hm[?25l[?12l[?25he[?25l[?12l[?25hn[?25l[?12l[?25ht[?25l[?12l[?25h [?25l[?12l[?25h{[?25l[?12l[?25h[6d[?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25h [?25l[?12l[?25hI[?25l[?12l[?25hM[?25l[?12l[?25hA[?25l[?12l[?25hG[?25l[?12l[?25hE[?25l[?12l[?25h_[?25l[?12l[?25hN[?25l[?12l[?25hA[?25l[?12l[?25hM[?25l[?12l[?25hE[?25l[?12l[?25h [?25l[?12l[?25h=[?25l[?12l[?25h [?25l[?12l[?25h"[?25l[?12l[?25hd[?25l[?12l[?25ho[?25l[?12l[?25hc[?25l[?12l[?25hk[?25l[?12l[?25he[?25l[?12l[?25hr[?25l[?12l[?25h.[?25l[?12l[?25hi[?25l[?12l[?25ho[?25l[?12l[?25h/[?25l[?12l[?25ha[?25l[?12l[?25h[7d[?25l[?12l[?25h[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h3"[?25l[?12l[?25h2"[?25l[?12l[?25h1"[?25l[?12l[?25h0"[?25l[?12l[?25h[8;27H[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h0[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h"[K[?25l[?12l[?25h3"[?25l[?12l[?25h2"[?25l[?12l[?25h1"[?25l[?12l[?25h0"[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25hk[?25l[?12l[?25he[?25l[?12l[?25hr[?25l[?12l[?25h.[?25l[?12l[?25hi[?25l[?12l[?25ho[?25l[?12l[?25h/[?25l[?12l[?25ha[?25l[?12l[?25ha[?25l[?12l[?25hy[?25l[?12l[?25ha[?25l[?12l[?25hn[?25l[?12l[?25hi[?25l[?12l[?25hn[?25l[?12l[?25hd[?25l[?12l[?25hi[?25l[?12l[?25ha[?25l[?12l[?25h/[?25l[?12l[?25hc[?25l[?12l[?25ha[?25l[?12l[?25hr[?25l[?12l[?25ht[?25l[?12l[?25h-[?25l[?12l[?25hb[?25l[?12l[?25ha[?25l[?12l[?25hc[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25hb-back"[45G[?25l[?12l[?25hi-back"[46G[?25l[?12l[?25ht-back"[47G[?25l[?12l[?25hc-back"[48G[?25l[?12l[?25ho-back"[49G[?25l[?12l[?25hi-back"[50G[?25l[?12l[?25hn-back"[51G[?25l[?12l[?25h[7;32H[?25l[?12l[?25h[8;27H[?25l[?12l[?25h[9;51H[?25l[?12l[?25h[10d[?25l[?12l[?25h[11d[?25l[?12l[?25h[12;47H[?25l[?12l[?25h[13;51H[?25l[?12l[?25h[14d[?25l[?12l[?25h[15;6H[?25l[?12l[?25h[16d[?25l[?12l[?25h[17;13H[?25l[?12l[?25h[18;28H[?25l[?12l[?25h[19;20H[?25l[?12l[?25h[20;25H[?25l[?12l[?25h[21;33H[?25l[?12l[?25h[22;18H[?25l[?12l[?25h[23;14H[?25l[?12l[?25h[24;10H[?25l[?12l[?25h[25d[?25l[?12l[?25h[26;30H[?25l[?12l[?25h[27;20H[?25l[?12l[?25h[28;25H[?25l[?12l[?25h[29d''[?25l[?12l[?25h[30;45H[?25l[?12l[?25h[31;51H[?25l[?12l[?25h[32;24H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9Hstage('SonarQube Analysis') {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13Hsteps {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17Hscript {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hsh '''[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hecho "Running SonarQube analysis using Docker..."[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hdocker run --rm \[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H-v $(pwd):/usr/src \[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H--network host \[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hsonarsource/sonar-scanner-cli:latest \[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H-Dsonar.projectKey=social-ecom-back \[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H-Dsonar.sources=/usr/src \[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H-Dsonar.host.url=[94mhttp://3.223.253.106:9000[39m(B[m \[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H-Dsonar.login=${SONARTOKEN}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21H'''[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9Hstage('Login to Docker Hub') {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13Hsteps {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17Hscript {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hsh '''[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hecho "Logging in to Docker Hub..."[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hif echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin; then[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hecho "✅ Docker Hub login successful!"[32;51H[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[29;27H[?25l[?12l[?25h[A[?25l[?12l[?25h[27;20H[?25l[?12l[?25h[26;39H[?25l[?12l[?25h[25;10H[?25l[?12l[?25h[A   }[?25l[?12l[?25h[A   }[?25l[?12l[?25h[22;24H[?25l[?12l[?25h[21;51H[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[A[?25l[?12l[?25h[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25h[1P[?25l[?12l[?25hb-ecom-back \[18;45H[?25l[?12l[?25hi-ecom-back \[18;46H[?25l[?12l[?25ht-ecom-back \[18;47H[?25l[?12l[?25hc-ecom-back \[18;48H[?25l[?12l[?25ho-ecom-back \[18;49H[?25l[?12l[?25hi-ecom-back \[18;50H[?25l[?12l[?25hn-ecom-back \[18;51H[?25l[?12l[?25h[19d[?25l[?12l[?25h[20d[?25l[?12l[?25h[21d[?25l[?12l[?25h[22;24H[?25l[?12l[?25h[23;18H[?25l[?12l[?25h[24;14H[?25l[?12l[?25h[25;10H[?25l[?12l[?25h[26;39H[?25l[?12l[?25h[27;20H[?25l[?12l[?25h[28;25H[?25l[?12l[?25h[29d''[?25l[?12l[?25h[30;51H[?25l[?12l[?25h[31d[?25l[?12l[?25h[32d[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Helse[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hecho "❌ ERROR: Docker Hub login failed! Check credentials in Jenkins."[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hexit 1[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hfi[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21H'''[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9Hstage('Generate Next Image Tag') {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13Hsteps {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17Hscript {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hdef latestTag = sh([?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hscript: '''[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hcurl -s [94mhttps://hub.docker.com/v2/repositories/aayanindia/handy-frontend/tags/[39m(B[m | \[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hjq -r '.results[].name' | grep -E '^stage-v[0-9]+$' | sort -V | tail -n1 | awk -F'v' '{print $2}'[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H''',[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25HreturnStdout: true[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21H).trim()[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hdef newTag = latestTag ? "stage-v${latestTag.toInteger() + 1}" : "stage-v1"[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Henv.NEW_STAGE_TAG = newTag[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hecho "🆕 New Docker Image Tag: ${newTag}"[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9Hstage('Build Docker Image') {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13Hsteps {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17Hscript {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hdef buildResult = sh([?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hscript: '''#!/bin/bash[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hset -eo pipefail[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hecho "Building Docker image..."[51G[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Hdocker build -t ${IMAGE_NAME}:latest . 2>&1 | tee failure.log[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25H''',[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25HreturnStatus: true[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21H)[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21Hif (buildResult != 0) {[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;25Herror "❌ Docker build failed! Check failure.log"[32;51H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;21H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;17H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;13H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9H}[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;1H[?25l[?12l[?25h7[2;33r8[33d
+[1;35r[32;9Hstage('Tag Docker Image') {[?25l[34;16H[20X[34;36H(B[0;7mM-D(B[m DOS Format  [34;61H          (B[0;7mM-A(B[m Append[18X[34;108H(B[0;7mB(B[m Backup File[K[35;2H(B[0;7mC(B[m Cancel[16G[20X[35;36H(B[0;7mM-M(B[m Mac Format    [61G          (B[0;7mM-P(B[m Prepend[17X[35;106H(B[0;7m^T(B[m Browse[K[33d(B[0;7mFile Name to Write: Jenkinsfile                                                                                                               [33;32H(B[m[?12l[?25h[?25l[33;64H[1K (B[0;7m[ Writing... ](B[m[K[1;81H(B[0;7m [141G(B[m[33;62H(B[0;7m[ Wrote 224 lines ](B[m[34;16H(B[0;7m^O(B[m Write Out   (B[0;7m^W(B[m Where Is    (B[0;7m^K(B[m Cut[34;61H(B[0;7m^T(B[m Execute     (B[0;7m^C(B[m Location    (B[0;7mM-U(B[m Undo[34;108H(B[0;7mA(B[m Set Mark   (B[0;7mM-](B[m To Bracket[35;2H(B[0;7mX(B[m Exit  [16G(B[0;7m^R(B[m Read File   (B[0;7m^\(B[m Replace     (B[0;7m^U(B[m Paste[61G(B[0;7m^J(B[m Justify     (B[0;7m^/(B[m Go To Line  (B[0;7mM-E(B[m Redo[106G(B[0;7mM-6(B[m Copy [121G(B[0;7m^Q(B[m Where Was[?12l[?25h[32;36H[?25l[33d[J[35d[?12l[?25h[35;1H[
