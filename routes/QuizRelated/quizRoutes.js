@@ -3,6 +3,7 @@ const {
   createQuiz,
   getQuizById,
   getAllQuizzes,
+  deleteQuizById,
 } = require("../../controllers/QuizRelated/QuizController");
 const { uploadToS3 } = require("../../config/s3Setup");
 const { auth } = require("../../middlewares/authMiddleware");
@@ -25,9 +26,9 @@ const router = express.Router();
 // ********************************************
 router.post("/create-quiz", uploadToS3, createQuiz);
 router.get("/get-all-quizzes", getAllQuizzes);
-
 router.get("/get-quizById/:id", getQuizById);
 router.put("/remove-question-from-quiz", removeQuestionFromQuiz);
+router.delete("/delete-quiz/:id", deleteQuizById);
 
 // *****************************************
 // quiz attempt related
