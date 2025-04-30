@@ -1,5 +1,5 @@
 const express = require('express');
-const {  userSignup,login, verifyOtp, resetPassword, forgotPassword,updatePassword } = require('../controllers/authController');
+const {  userSignup,login, verifyOtp, resetPassword, forgotPassword,updatePassword,saveDeviceToken } = require('../controllers/authController');
 const { uploadToS3 } = require('../config/s3Setup');
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
@@ -17,6 +17,7 @@ router.post('/login',rateLimiter, login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/update-password", updatePassword);
+router.put("/save-device-token", saveDeviceToken);
 
 
 module.exports = router;    

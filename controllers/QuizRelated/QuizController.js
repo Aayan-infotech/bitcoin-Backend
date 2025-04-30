@@ -3,6 +3,7 @@ const Question = require("../../models/QuizRelated/QuestionsModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
 const Course = require("../../models/CourseRelated/CourseModel");
+const { sendNotification } = require("../../config/pushNotification");
 
 // Create a new Quiz
 exports.createQuiz = async (req, res) => {
@@ -10,8 +11,8 @@ exports.createQuiz = async (req, res) => {
     const { title, description, timeLimit } = req.body;
     if (!req.fileLocations[0]) {
       return res
-        .status(402)
-        .json({ success: false, message: "issue with image" });
+        .status(500)
+        .json({ success: false, message: "Image not found" });
     }
 
     const newQuiz = new Quiz({
@@ -24,9 +25,10 @@ exports.createQuiz = async (req, res) => {
     await newQuiz.save();
     const allUsers = await User.find({}, "_id"); // Fetch all users
     allUsers.forEach((user) =>
-      global.sendNotification(
+      sendNotification
+    (
         user._id,
-        `A new Quiz "${title}" has been added.`,
+        `A new Quiz ${title} has been added.`,
         "promotional"
       )
     );

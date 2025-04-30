@@ -83,6 +83,7 @@ const getDashboardData = async (req, res) => {
       userProfile:user.image,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      notification:user.notificationPreferences
     };
 
     res.status(200).json({

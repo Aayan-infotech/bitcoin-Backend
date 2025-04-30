@@ -1,6 +1,7 @@
 const Section = require("../../models/CourseRelated/CourseSectionsModel");
 const Course = require("../../models/CourseRelated/CourseModel");
 const User = require("../../models/userModel");
+const { sendNotification } = require("../../config/pushNotification");
 
 exports.createSection = async (req, res) => {
   try {
@@ -35,7 +36,7 @@ exports.createSection = async (req, res) => {
 
     const allUsers = await User.find({}, "_id"); // Fetch all users
     allUsers.forEach((user) =>
-      global.sendNotification(
+      sendNotification(
         user._id,
         `A new section "${title}" has been added to the "${course.courseName}"`,
         "promotional"

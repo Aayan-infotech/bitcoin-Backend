@@ -8,7 +8,7 @@ const express=require("express")
 
 const router=express.Router()
 // ***************************** Course CRUD Routes************************************
-router.post("/create-course",auth,createCourse)
+router.post("/create-course",auth,uploadToS3,createCourse)
 router.get("/get-all-courses",getAllCourses)
 router.get("/get-course-details/:courseId",getCourseDetails)
 router.patch("/update-course/:courseId",editCourse)

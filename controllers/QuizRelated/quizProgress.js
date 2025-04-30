@@ -1,6 +1,7 @@
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const Question = require("../../models/QuizRelated/QuestionsModel");
 const User = require("../../models/userModel");
+const { sendNotification } = require("../../config/pushNotification");
 
 
 // Start a quiz attempt
@@ -69,7 +70,7 @@ exports.submitQuizAnswers = async (req, res) => {
     });
 
     await quizAttempt.save();
-    global.sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "promotional")
+    sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "promotional")
     
 
     res.status(200).json({

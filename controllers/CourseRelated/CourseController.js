@@ -1,3 +1,4 @@
+const { sendNotification } = require("../../config/pushNotification");
 const Course = require("../../models/CourseRelated/CourseModel");
 const Section = require("../../models/CourseRelated/CourseSectionsModel");
 const User = require("../../models/userModel");
@@ -24,7 +25,7 @@ exports.createCourse = async (req, res) => {
       courseName,
       courseDescription,
       instructor: instructor._id,
-      thumbnail: req.fileLocations[0],
+      thumbnail: req?.fileLocations[0],
       status: status || "Draft",
     });
 
@@ -32,9 +33,9 @@ exports.createCourse = async (req, res) => {
     await instructor.save();
     const allUsers = await User.find({}, "_id"); 
     allUsers.forEach((user) =>
-      global.sendNotification(
+      sendNotification(
         user._id,
-        `A new course "${courseName}" has been added.`,
+        `A new course ${courseName} has been added.`,
         "promotional"
       )
     );
@@ -234,7 +235,7 @@ exports.editCourse = async (req, res) => {
 // Delete course
 exports.deleteCourse = async (req, res) => {
   try {
-    const { courseId } = req.body;
+    const { courseId } = req.params;
     const course = await Course.findById(courseId);
     if (!course) {
       return res

@@ -66,14 +66,14 @@ const UserSchema = new Schema(
         ref: "Quiz",
       },
     ],
-
+    deviceToken: { type: String },
     resetPasswordOtp: { type: String },
     resetPasswordExpires: { type: Date },
     notificationPreferences: {
-      security: { type: Boolean, default: true },
-      promotional: { type: Boolean, default: false },
+      promotional: { type: Boolean, default: true },
+      wallet: { type: Boolean, default: true },
       transaction: { type: Boolean, default: true },
-      ads: { type: Boolean, default: false }
+      security: { type: Boolean, default: true }
     }     
   },
   { timestamps: true }
@@ -82,4 +82,5 @@ const UserSchema = new Schema(
 
 
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.
+model("User", UserSchema);

@@ -6,10 +6,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const routes = require("./routes");
 const { connectToDb } = require("./config/mongoDb");
-const setupSocket = require("./config/socket");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const multer = require("multer");
 
 const PORT = process.env.PORT || 3000;
 const  app = express();
@@ -35,7 +32,6 @@ app.use(helmet());
 app.use("/api", routes);
 
 // 🔹 Setup WebSockets for Real-Time Notifications
-setupSocket(server);
 
 // 🔹 Start the Server
 server.listen(PORT, async () => {

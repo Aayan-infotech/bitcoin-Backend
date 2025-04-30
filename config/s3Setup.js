@@ -86,7 +86,7 @@ const uploadToS3 = async (req, res, next) => {
       req.fileLocations = fileLocations;
       next();
     } catch (uploadError) {
-      return res.status(500).send(uploadError.message);
+      return res.status(500).send(uploadError);
     }
   });
 };

@@ -29,7 +29,7 @@ exports.getUserNotifications = async (req, res) => {
     const user = await User.findById(req.user.id);
 
     const prefs = user.notificationPreferences;
-
+    console.log(prefs);
     const typesUserWants = Object.keys(prefs).filter((type) => prefs[type]);
 
     const notifications = await Notification.find({
@@ -37,40 +37,27 @@ exports.getUserNotifications = async (req, res) => {
       type: { $in: typesUserWants },
     }).sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, notifications,message:"Notifications fetched succesfully" });
+    res
+      .status(200)
+      .json({
+        success: true,
+        notifications,
+        message: "Notifications fetched succesfully",
+      });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Error while fetching the notifications",
-      error
+      error,
     });
-  }
-};
-
-exports.getAllNotificationsByuserId = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res
-        .status(402)
-        .json({ success: false, message: "Id is required" });
-    }
-
-    const notifications = await Notification.find({ userId: id }).sort({
-      createdAt: -1,
-    });
-    res.status(200).json({ success: true, data: notifications });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error fetching notifications" });
   }
 };
 
 exports.updateNotificationPreferences = async (req, res) => {
   const updates = req.body;
 
-  const validTypes = ["security", "promotional", "transaction", "ads"];
+  // const validTypes = ["quiz", "course", "transaction", "ads"];
+  const validTypes = ["promotional", "wallet", "transaction", "security"];
 
   const isValidUpdate = Object.keys(updates).every((key) =>
     validTypes.includes(key)

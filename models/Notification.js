@@ -4,7 +4,7 @@ const notificationSchema = new mongoose.Schema(
   {
     userId: { type: String },
     message: { type: String, required: true },
-    type: { type: String, required: true,enum:["course","quiz","signup","security"] }, 
+    type: { type: String, required: true,enum:["promotional", "wallet", "transaction", "security"] }, 
     isRead: { type: Boolean, default: false },
   },
   { timestamps: true }
