@@ -9,12 +9,12 @@ exports.startQuiz = async (req, res) => {
     const { userId, quizId } = req.body;
 
     // Check if the user has already attempted the quiz
-    const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
-    if (existingAttempt) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Quiz already attempted" });
-    }
+    // const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
+    // if (existingAttempt) {
+    //   return res
+    //     .status(400)
+    //     .json({ success: false, message: "Quiz already attempted" });
+    // }
 
     // Initialize a new quiz attempt
     const newAttempt = new QuizAttempt({
@@ -39,6 +39,12 @@ exports.startQuiz = async (req, res) => {
 exports.submitQuizAnswers = async (req, res) => {
   try {
     const { quizId, userId, answers } = req.body;
+    const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
+    // if (existingAttempt) {
+    //   return res
+    //     .status(400)
+    //     .json({ success: false, message: "Quiz already attempted" });
+    // }
 
     if (!quizId || !userId || !answers || !Array.isArray(answers)) {
       return res.status(400).json({ success: false, message: "Invalid input" });
