@@ -1,8 +1,7 @@
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
-const Question = require("../../models/QuizRelated/QuestionsModel");
+const Quiz = require("../../models/QuizRelated/QuizModel");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
-
 
 // Start a quiz attempt
 exports.startQuiz = async (req, res) => {
@@ -12,7 +11,9 @@ exports.startQuiz = async (req, res) => {
     // Check if the user has already attempted the quiz
     const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
     if (existingAttempt) {
-      return res.status(400).json({ success: false, message: "Quiz already attempted" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Quiz already attempted" });
     }
 
     // Initialize a new quiz attempt
@@ -26,9 +27,13 @@ exports.startQuiz = async (req, res) => {
 
     await newAttempt.save();
 
-    res.status(201).json({ success: true, message: "Quiz started", attempt: newAttempt });
+    res
+      .status(201)
+      .json({ success: true, message: "Quiz started", attempt: newAttempt });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error starting quiz", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error starting quiz", error });
   }
 };
 exports.submitQuizAnswers = async (req, res) => {
@@ -70,8 +75,11 @@ exports.submitQuizAnswers = async (req, res) => {
     });
 
     await quizAttempt.save();
-    sendNotification(userId, `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`, "promotional")
-    
+    sendNotification(
+      userId,
+      `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`,
+      "promotional"
+    );
 
     res.status(200).json({
       success: true,
@@ -83,18 +91,22 @@ exports.submitQuizAnswers = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ success: false, message: "Error submitting quiz", error });
+      .json({ success: false, message: "Error submitting quiz", error:error.message });
   }
 };
 // Get a user's quiz progress
 exports.getUserAttempts = async (req, res) => {
   try {
     const { userId } = req.params;
-    const progress = await QuizAttempt.find({ userId }).populate("quizId").sort({ updatedAt: -1 })
+    const progress = await QuizAttempt.find({ userId })
+      .populate("quizId")
+      .sort({ updatedAt: -1 });
 
     res.status(200).json({ success: true, progress });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching progress", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching progress", error });
   }
 };
 
@@ -107,6 +119,8 @@ exports.getLeaderboard = async (req, res) => {
 
     res.status(200).json({ success: true, leaderboard });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching leaderboard", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching leaderboard", error });
   }
 };
