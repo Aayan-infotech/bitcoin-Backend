@@ -8,7 +8,7 @@ const UserSchema = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String ,required:true,select:false},
+    password: { type: String, required: true, select: false },
     mobileNumber: { type: String },
     gender: {
       type: String,
@@ -17,17 +17,18 @@ const UserSchema = new Schema(
     accountType: {
       type: String,
       enum: ["Personal", "Business", "Other"],
+      default: "Personal",
     },
-    image: { type: String },
+    image: { type: String, default: null },
     wallet_address: {
       type: String,
-      required:true,
-      unique:true
+      required: true,
+      unique: true,
     },
     private_key_encrypted: {
       type: String,
-      required:true,
-      unique:true
+      required: true,
+      unique: true,
     },
     level: {
       type: String,
@@ -73,14 +74,10 @@ const UserSchema = new Schema(
       promotional: { type: Boolean, default: true },
       wallet: { type: Boolean, default: true },
       transaction: { type: Boolean, default: true },
-      security: { type: Boolean, default: true }
-    }     
+      security: { type: Boolean, default: true },
+    },
   },
   { timestamps: true }
 );
 
-
-
-
-module.exports = mongoose.
-model("User", UserSchema);
+module.exports = mongoose.model("User", UserSchema);

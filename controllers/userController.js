@@ -80,10 +80,11 @@ const getDashboardData = async (req, res) => {
       wallet_address: user.wallet_address,
       wallet_balance: balanceSOL,
       last_transactions: transactions,
-      userProfile:user.image,
+      userProfile: user.image,
+      userType: user.accountType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      notification:user.notificationPreferences
+      notification: user.notificationPreferences,
     };
 
     res.status(200).json({
@@ -92,9 +93,10 @@ const getDashboardData = async (req, res) => {
       user: responseData,
     });
   } catch (err) {
-    return res.status(500).json({ error: "Failed to fetch dashboard data", err });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch dashboard data", err });
   }
 };
-
 
 module.exports = { getAllUsers, updateProfile, getDashboardData };
