@@ -37,13 +37,11 @@ exports.getUserNotifications = async (req, res) => {
       type: { $in: typesUserWants },
     }).sort({ createdAt: -1 });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        notifications,
-        message: "Notifications fetched succesfully",
-      });
+    res.status(200).json({
+      success: true,
+      notifications,
+      message: "Notifications fetched succesfully",
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -70,6 +68,12 @@ exports.updateNotificationPreferences = async (req, res) => {
   }
 
   try {
+    if (!req.user.id) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid Token",
+      });
+    }
     const user = await User.findById(req.user.id);
 
     user.notificationPreferences = {
