@@ -50,7 +50,7 @@ exports.createQuiz = async (req, res) => {
 // Get all quizzes
 exports.getAllQuizzes = async (req, res) => {
   try {
-    const quizzes = await Quiz.find().populate("questions");
+    const quizzes = await Quiz.find().select("-questions");
     res.status(200).json({
       success: true,
       quizzes,

@@ -84,6 +84,7 @@ const getDashboardData = async (req, res) => {
       userType: user.accountType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      biometricAuth:user.biometricAuth,
       notification: user.notificationPreferences,
     };
 
