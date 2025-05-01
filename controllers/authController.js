@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const sendEmail = require("../config/sendMail");
-const {sendNotification} = require("../config/pushNotification");
+const { sendNotification } = require("../config/pushNotification");
 const { createWallet } = require("../utils/BlockChainService");
 
 const encryptPrivateKey = (privateKey) => {
@@ -149,8 +149,8 @@ const verifyOtp = async (req, res) => {
     } catch (err) {
       console.log(err.message);
       return res.status(401).json({
-        message:"error while pushing notification "
-      })
+        message: "error while pushing notification ",
+      });
     }
     user.isEmailVerified = true;
     user.emailVerificationOtp = undefined;
@@ -362,6 +362,51 @@ const saveDeviceToken = async (req, res) => {
   }
 };
 
+const updateBiometric = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password is required",
+      });
+    }
+
+    const existUser = await User.findById(req.user.id).select("+password");
+
+    if (!existUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const passwordVerified = await bcrypt.compare(password, existUser.password);
+
+    if (!passwordVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
+    }
+
+    existUser.biometricAuth = !existUser.biometricAuth;
+    await existUser.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Biometric authentication ${existUser.biometricAuth ? "Enabled" : "Disabled"}`,
+
+    });
+  } catch (err) {
+    console.error("Error updating biometric:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   saveDeviceToken,
   userSignup,
@@ -370,4 +415,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   updatePassword,
+  updateBiometric,
 };
