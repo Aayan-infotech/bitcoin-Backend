@@ -1,43 +1,49 @@
 const Notification = require("../models/Notification");
 const User = require("../models/userModel");
-const admin = require("./firebse");
+const admin = require("./firebse"); // Firebase Admin SDK setup
 
-const sendNotification = async (userId, message, type = "promotional") => {
+const sendNotification = async (userIds, message, type = "promotional", sentBy, broadcastId = null) => {
   try {
-    // Save the notification in MongoDB
-    const newNotification = new Notification({
+    const ids = Array.isArray(userIds) ? userIds : [userIds];
+
+    // Step 1: Create and save all notifications in the DB
+    const notificationsToInsert = ids.map((userId) => ({
       userId,
       message,
       type,
-    });
-    await newNotification.save();
+      sentBy,
+      broadcastId,
+    }));
 
-    // Fetch user's FCM token
-    const user = await User.findById(userId);
-    if (!user?.deviceToken) {
-      console.log("No FCM token found for user.");
-      return;
-    }
+    const savedNotifications = await Notification.insertMany(notificationsToInsert);
 
-    const fcmMessage = {
-      token: user.deviceToken,
-      notification: {
-        title: type.charAt(0).toUpperCase() + type.slice(1),
-        body: message,
-      },
-      data: {
-        notificationId: newNotification._id.toString(),
-        userId: userId.toString(),
-      },
-    };
-    try {
-      const response = await admin.messaging().send(fcmMessage);
-      console.log("Push notification sent:", response);
-    } catch (fcmError) {
-      console.error("FCM error:", fcmError.message);
+    // Step 2: Try sending push notifications only to users with FCM tokens
+    const usersWithTokens = await User.find({ _id: { $in: ids }, deviceToken: { $exists: true, $ne: null } });
+
+    for (const user of usersWithTokens) {
+      const notification = savedNotifications.find((n) => n.userId.toString() === user._id.toString());
+
+      const fcmMessage = {
+        token: user.deviceToken,
+        notification: {
+          title: type.charAt(0).toUpperCase() + type.slice(1),
+          body: message,
+        },
+        data: {
+          notificationId: notification?._id.toString() || "",
+          userId: user._id.toString(),
+          broadcastId: broadcastId?.toString() || "",
+        },
+      };
+
+      try {
+        const response = await admin.messaging().send(fcmMessage);
+      } catch (err) {
+        console.error(`FCM error for ${user._id}:`, err.message);
+      }
     }
   } catch (err) {
-    console.error("Failed to send push notification:", err.message);
+    console.error("Notification send failed:", err.message);
   }
 };
 

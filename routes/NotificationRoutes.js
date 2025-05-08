@@ -1,5 +1,5 @@
 const express = require("express");
-const {  getAllNotifications,getUserNotifications,updateNotificationPreferences} = require('../controllers/Notificaton');
+const {  getAllNotifications,getUserNotifications,updateNotificationPreferences, createAdminPushNotification} = require('../controllers/Notificaton');
 const { auth } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/all-notification', getAllNotifications);
 router.get('/all-notification-ofUser',auth, getUserNotifications);
 router.put('/update-user-notification-preference',auth, updateNotificationPreferences);
+router.post('/create-notification',auth, createAdminPushNotification);
 
 
 module.exports = router;

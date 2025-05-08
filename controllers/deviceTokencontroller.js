@@ -1,33 +1,43 @@
-const DeviceToken = require("../models/deviceToken");
+const User = require("../models/userModel");
 
+// Register or Update Device Token (on User model)
 exports.registerOrUpdateDeviceToken = async (req, res) => {
   try {
-    const { userId, deviceToken, type } = req.body;
-
-    if (!deviceToken || !type) {
+    const {  deviceToken } = req.body;
+    const userId=req.user.id
+    const platform = req.headers['platform']; // 'ios' or 'android'
+    if (!userId || !deviceToken || !platform) {
       return res.status(400).json({
         success: false,
-        message: "deviceToken and type are required.",
+        message: "userId, deviceToken, and platform (in headers) are required.",
       });
     }
 
+    const type = platform.toLowerCase();
     if (!["ios", "android"].includes(type)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid device type. Must be 'ios' or 'android'.",
+        message: "Invalid platform type. Must be 'ios' or 'android'.",
       });
     }
 
-    const tokenDoc = await DeviceToken.findOneAndUpdate(
+    const user = await User.findByIdAndUpdate(
+      userId,
       { deviceToken },
-      { userId, type },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { new: true }
     );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "Device token registered or updated successfully.",
-      data: tokenDoc,
+      data: user,
     });
   } catch (error) {
     res.status(500).json({
@@ -38,13 +48,13 @@ exports.registerOrUpdateDeviceToken = async (req, res) => {
   }
 };
 
-// Get all device tokens
+// Get all users with device tokens
 exports.getAllDeviceTokens = async (req, res) => {
   try {
-    const tokens = await DeviceToken.find();
+    const usersWithTokens = await User.find({ deviceToken: { $ne: null } }, '_id name email deviceToken');
     res.status(200).json({
       success: true,
-      data: tokens,
+      data: usersWithTokens,
     });
   } catch (error) {
     res.status(500).json({
@@ -55,19 +65,20 @@ exports.getAllDeviceTokens = async (req, res) => {
   }
 };
 
-// Get device token by ID
-exports.getDeviceTokenById = async (req, res) => {
+// Get device token by User ID
+exports.getDeviceTokenByUserId = async (req, res) => {
   try {
-    const token = await DeviceToken.findById(req.params.id);
-    if (!token) {
+    const user = await User.findById(req.params.id, '_id name email deviceToken');
+    if (!user || !user.deviceToken) {
       return res.status(404).json({
         success: false,
-        message: "Device token not found.",
+        message: "Device token not found for the specified user.",
       });
     }
+
     res.status(200).json({
       success: true,
-      data: token,
+      data: user,
     });
   } catch (error) {
     res.status(500).json({
@@ -78,24 +89,30 @@ exports.getDeviceTokenById = async (req, res) => {
   }
 };
 
-// Delete device token by ID
-exports.deleteDeviceToken = async (req, res) => {
+// Remove device token (logout or uninstall case)
+exports.removeDeviceToken = async (req, res) => {
   try {
-    const deleted = await DeviceToken.findByIdAndDelete(req.params.id);
-    if (!deleted) {
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { deviceToken: null },
+      { new: true }
+    );
+
+    if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Device token not found.",
+        message: "User not found.",
       });
     }
+
     res.status(200).json({
       success: true,
-      message: "Device token deleted successfully.",
+      message: "Device token removed successfully.",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Error deleting device token.",
+      message: "Error removing device token.",
       error: error.message,
     });
   }

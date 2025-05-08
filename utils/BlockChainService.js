@@ -23,7 +23,7 @@ exports.sendTransaction = async (fromPrivateKey, toPublicKey, amount) => {
   const toPublicKeyObj = new PublicKey(toPublicKey);
 
   const transaction = await connection.requestAirdrop(toPublicKeyObj, amount * LAMPORTS_PER_SOL);
-  return transaction;
+  return transaction;   
 };
 // below is my code for sending real solana coins   
 
