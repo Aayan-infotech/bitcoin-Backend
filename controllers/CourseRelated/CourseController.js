@@ -118,7 +118,6 @@ exports.searchCourse = async (req, res) => {
         ],
       };
     }
-    console.log(filter, "filterrr");
 
     const courses = await Course.find(filter);
 
