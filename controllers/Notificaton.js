@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { sendNotification } = require("../config/pushNotification");
 const Notification = require("../models/Notification");
 const User = require("../models/userModel");
@@ -149,10 +150,8 @@ exports.createAdminPushNotification = async (req, res) => {
     }
 
     if (targetUserId) {
-      // 🔸 Send to a specific user
       await sendNotification(targetUserId, message, type, req.user.id);
     } else {
-      // 🔸 Broadcast to all users with a shared broadcastId
       const users = await User.find({ });
       if (!users.length) {
         return res.status(404).json({ success: false, message: "No users found ." });

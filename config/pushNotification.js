@@ -37,9 +37,11 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
       };
 
       try {
+        console.log(admin.messaging().getToken());
         const response = await admin.messaging().send(fcmMessage);
+        console.log(response)
       } catch (err) {
-        console.error(`FCM error for ${user._id}:`, err.message);
+        console.error(`FCM error for ${user._id}:`, err);
       }
     }
   } catch (err) {

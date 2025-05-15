@@ -145,7 +145,7 @@ const verifyOtp = async (req, res) => {
 
     // Mark email as verified
     try {
-      sendNotification(user._id, "Signup successfull", "security");
+      sendNotification(user._id, "Signup successfull", "security");s
     } catch (err) {
       console.log(err.message);
       return res.status(401).json({
