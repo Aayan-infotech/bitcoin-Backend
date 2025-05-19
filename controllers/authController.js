@@ -5,27 +5,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const sendEmail = require("../config/sendMail");
 const { sendNotification } = require("../config/pushNotification");
-const { createWallet } = require("../utils/BlockChainService");
 
-const encryptPrivateKey = (privateKey) => {
-  const cipher = crypto.createCipher(
-    "aes-256-cbc",
-    process.env.ENCRYPTION_SECRET
-  );
-  let encrypted = cipher.update(privateKey, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  return encrypted;
-};
-const decryptPrivateKey = (encryptedPrivateKey) => {
-  const decipher = crypto.createDecipher(
-    "aes-256-cbc",
-    process.env.ENCRYPTION_SECRET
-  );
-
-  let decrypted = decipher.update(encryptedPrivateKey, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
-};
 // signup
 const userSignup = async (req, res, next) => {
   try {
@@ -76,10 +56,9 @@ const userSignup = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create crypto wallet
+
     const wallet = createWallet();
-    if (!wallet.publicKey || !wallet.privateKey) {
-      throw new Error("Wallet generation failed");
-    }
+    const encryptedKey = encrypt(wallet.privateKey);
 
     // Create new user
     const newUser = new User({
@@ -89,8 +68,8 @@ const userSignup = async (req, res, next) => {
       mobileNumber,
       gender,
       accountType: accountType || "Personal", // default to "Personal" if not provided
-      wallet_address: wallet.publicKey,
-      private_key_encrypted: encryptPrivateKey(wallet.privateKey),
+      wallet_address: wallet.address,
+      private_key_encrypted: encryptedKey,
       emailVerificationOtp: otp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000,
     });
@@ -145,7 +124,8 @@ const verifyOtp = async (req, res) => {
 
     // Mark email as verified
     try {
-      sendNotification(user._id, "Signup successfull", "security");s
+      sendNotification(user._id, "Signup successfull", "security");
+      s;
     } catch (err) {
       console.log(err.message);
       return res.status(401).json({
@@ -204,7 +184,7 @@ const login = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Login successful", token,user });
+      .json({ success: true, message: "Login successful", token, user });
   } catch (error) {
     console.error("Login Error:", error);
     return res
@@ -395,8 +375,9 @@ const updateBiometric = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Biometric authentication ${existUser.biometricAuth ? "Enabled" : "Disabled"}`,
-
+      message: `Biometric authentication ${
+        existUser.biometricAuth ? "Enabled" : "Disabled"
+      }`,
     });
   } catch (err) {
     console.error("Error updating biometric:", err);

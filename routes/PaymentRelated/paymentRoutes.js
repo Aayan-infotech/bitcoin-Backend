@@ -1,9 +1,10 @@
 const express=require("express");
-const { auth } = require("../../middlewares/authMiddleware");
-const { sendCoins } = require("../../controllers/PaymentsRelated/TransactionController");
 const router=express.Router()
+const controller = require('../../controllers/WalletController/WalletController');
 
-router.post("/send", auth, sendCoins);
+router.post('/transfer', controller.sendCoins);
+router.get('/transaction/:hash', controller.checkTransaction);
+router.get('/balance/:address', controller.getUserBalance);
 
 module.exports =router;
 
