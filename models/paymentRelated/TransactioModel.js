@@ -1,43 +1,16 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-// const transactionSchema = new mongoose.Schema({
-//   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-//   amount: { type: Number, required: true },
-//   currency: { type: String, enum: ["crypto", "fiat"], required: true },
-//   transactionType: {
-//     type: String,
-//     enum: ["deposit", "withdrawal", "payment", "reward"],
-//     required: true,
-//   },
-//   status: {
-//     type: String,
-//     enum: ["pending", "successful", "failed"],
-//     default: "pending",
-//   },
-//   timestamp: { type: Date, default: Date.now },
-// });
+const transactionSchema = new mongoose.Schema({
+  from: { type: String, required: true },
+  to: { type: String, required: true },
+  hash: { type: String, required: true, unique: true },
+  blockNumber: Number,
+  gasUsed: String,
+  gasPrice: String,
+  totalFee: String,
+  amount: String,
+  status: { type: String, enum: ['Success', 'Failed'] },
+  timestamp: { type: Date, default: Date.now }
+});
 
-// module.exports = mongoose.model("Transaction", transactionSchema);
-// const mongoose = require("mongoose");
-
-const TransactionSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    transactionHash: { type: String, required: true },
-    amount: { type: Number, required: true },
-    gasFee: { type: Number, required: true },
-    status: {
-      type: String,
-      enum: ["pending", "successful", "failed"],
-      default: "pending",
-    },
-    createdAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Transaction", TransactionSchema);
+module.exports = mongoose.model('Transaction', transactionSchema);
