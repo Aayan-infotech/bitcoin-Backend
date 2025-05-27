@@ -9,6 +9,7 @@ const courseRoutes = require("./routes/CourseRelated/CourseRoutes");
 const userRoutes = require("./routes/UserRoutes/userRoutes");
 const cardRoutes = require("./routes/PaymentRelated/CardsRoutes");
 const deviceRoutes = require("./routes/deviceTokenRoutes");
+const paymentRoutes = require("./routes/PaymentRelated/paymentRoutes");
 
 router.use("/auth", authRoutes);
 router.use("/alphabet", alphabet);
@@ -19,5 +20,6 @@ router.use("/course", courseRoutes);
 router.use("/user",userRoutes);
 router.use("/card",cardRoutes);
 router.use("/device-token",deviceRoutes);
+router.use("/payment",paymentRoutes);
 
 module.exports = router;

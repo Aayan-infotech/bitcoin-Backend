@@ -1,11 +1,9 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
-//const provider = new ethers.providers.JsonRpcProvider(process.env.INFURA_API);
-// const provider = new ethers.providers.JsonRpcProvider(`https://sepolia.infura.io/v3/${process.env.INFURA_API}`);
+
 const provider = new ethers.providers.JsonRpcProvider(
   `https://sepolia.infura.io/v3/${process.env.INFURA_API}`
 );
-
 function createWallet() {
   const wallet = ethers.Wallet.createRandom();
   return {

@@ -28,12 +28,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// 🔹 Routes
 app.use("/api", routes);
 
-// 🔹 Setup WebSockets for Real-Time Notifications
-
-// 🔹 Start the Server
 server.listen(PORT, async () => {
   try {
     await connectToDb();

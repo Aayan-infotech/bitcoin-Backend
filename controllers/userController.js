@@ -1,12 +1,10 @@
 const User = require("../models/userModel");
-const { Connection, PublicKey } = require("@solana/web3.js");
 const Transaction = require("../models/paymentRelated/TransactioModel");
-
-const connection = new Connection("https://api.mainnet-beta.solana.com");
+const { getBalanceForAddress } = require("./WalletController/WalletController");
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find({ accountType: { $ne: "Admin" } });
     return res.status(200).json({
       success: true,
       message: "Users fetched Successfully",
@@ -75,11 +73,13 @@ const getDashboardData = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    const walletPublicKey = new PublicKey(user.wallet_address);
-    const balanceLamports = await connection.getBalance(walletPublicKey);
-    const balanceSOL = balanceLamports / 1e9;
-
+    let userBalance;
+    try {
+      userBalance = await getBalanceForAddress(user.wallet_address);
+      console.log(userBalance);
+    } catch (err) {
+      console.error(err);
+    }
     // last 10 transactions
     const transactions = await Transaction.find({ userId })
       .sort({ createdAt: -1 })
@@ -93,13 +93,13 @@ const getDashboardData = async (req, res) => {
       gender: user.gender,
       mobileNumber: user.mobileNumber,
       wallet_address: user.wallet_address,
-      wallet_balance: balanceSOL,
+      wallet_balance: userBalance,
       last_transactions: transactions,
       userProfile: user.image,
       userType: user.accountType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      biometricAuth:user.biometricAuth,
+      biometricAuth: user.biometricAuth,
       notification: user.notificationPreferences,
     };
 
@@ -115,4 +115,9 @@ const getDashboardData = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, getAllNotificationUsers,updateProfile, getDashboardData };
+module.exports = {
+  getAllUsers,
+  getAllNotificationUsers,
+  updateProfile,
+  getDashboardData,
+};
