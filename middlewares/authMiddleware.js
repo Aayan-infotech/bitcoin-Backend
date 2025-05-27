@@ -40,7 +40,7 @@ exports.isAdmin = async (req, res, next) => {
     try {
       const userPayload = jwt.verify(token, process.env.JWT_SECRET);
       const user = await userModel.findById(userPayload.id);
-      console.log(user);
+      // console.log(user);
       if (!user) {
         return res
           .status(404)

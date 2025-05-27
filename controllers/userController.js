@@ -71,14 +71,7 @@ const getDashboardData = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    let userBalance;
-    try {
-      userBalance = await getBalanceForAddress(user.wallet_address);
-      console.log(userBalance);
-    } catch (err) {
-      console.error(err);
+      return res.status(404).json({ error: "User not foa
     }
     // last 10 transactions
     const transactions = await Transaction.find({ userId })
