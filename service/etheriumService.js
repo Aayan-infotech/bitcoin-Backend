@@ -1,7 +1,7 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
-const { getSecrets } =require ("../../config/awsSecrets");
-const secrets = await getSecrets();
+const { getSecrets } =require ("../config/awsSecrets");
+const secrets =  getSecrets();
 
 const provider = new ethers.providers.JsonRpcProvider(
   `https://sepolia.infura.io/v3/${secrets.INFURA_API}`

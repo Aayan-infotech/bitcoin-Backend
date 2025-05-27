@@ -1,14 +1,14 @@
-import {
+const {
   SecretsManagerClient,
   GetSecretValueCommand
-} from "@aws-sdk/client-secrets-manager";
+} = require("@aws-sdk/client-secrets-manager");
 
 const secretName = process.env.USER || "aws-secret"; // stored in AWS
 const region = process.env.AWS_REGION || "us-east-1"; // adjust as needed
 
 let cachedSecrets = null;
 
-export const getSecrets = async () => {
+const getSecrets = async () => {
   if (cachedSecrets) return cachedSecrets;
 
   const client = new SecretsManagerClient({ region });
@@ -29,3 +29,5 @@ export const getSecrets = async () => {
     throw err;
   }
 };
+
+module.exports = { getSecrets };
