@@ -1,8 +1,10 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
+const { getSecrets } =require ("../../config/awsSecrets");
+const secrets = await getSecrets();
 
 const provider = new ethers.providers.JsonRpcProvider(
-  `https://sepolia.infura.io/v3/${process.env.INFURA_API}`
+  `https://sepolia.infura.io/v3/${secrets.INFURA_API}`
 );
 function createWallet() {
   const wallet = ethers.Wallet.createRandom();
@@ -13,7 +15,7 @@ function createWallet() {
 }
 
 function getAdminWallet() {
-  return new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
+  return new ethers.Wallet(secrets.ADMIN_PRIVATE_KEY, provider);
 }
 
 async function sendTransaction(to, amountInEther) {

@@ -7,6 +7,8 @@ const {
 } = require("../../service/etheriumService");
 const { saveTransactionReceipt } = require("../../utils/fileStorage");
 const { ethers } = require("ethers");
+const { getSecrets } =require ("../../config/awsSecrets");
+const secrets = await getSecrets();
 
 exports.sendCoins = async (req, res) => {
   try {
