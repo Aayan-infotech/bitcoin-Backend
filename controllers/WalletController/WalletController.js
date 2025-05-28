@@ -34,7 +34,7 @@ exports.sendCoins = async (req, res) => {
 
     saveTransactionReceipt({
       from: tx.from,
-      to:user.wallet_address,
+      to,
       hash: tx.hash,
       blockNumber: receipt.blockNumber,
       gasUsed: gasUsed.toString(),

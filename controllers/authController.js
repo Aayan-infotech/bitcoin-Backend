@@ -24,7 +24,8 @@ const userSignup = async (req, res, next) => {
     let user = await User.findOne({ email }).select("+password");
 
     // Generate 4-digit OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp =1111;
 
     const emailTemplate = (otp) => `
         <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
@@ -98,7 +99,6 @@ const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
-
     if (!user) {
       return res
         .status(400)
