@@ -1,13 +1,12 @@
 const mongoose = require("mongoose");
-MONGO_URL = "mongodb+srv://anuragyadav:4MttGnaem1H6sskw@cluster0.mpumx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+const { getSecrets } = require("./awsSecrets");
 
-const DB_URl = MONGO_URL;
 exports.connectToDb = async () => {
   try {
-    await mongoose.connect(DB_URl);
-    console.log("connected to mongoDB Successfully");
+    const secrets = await getSecrets(); // ✅ Await here
+    await mongoose.connect(secrets.MONGO_URL);
+    console.log("Connected to MongoDB Successfully");
   } catch (error) {
-    console.log("Error while connecting to mongodb",error.message);
-
+    console.error("Error while connecting to MongoDB:", error);
   }
 };

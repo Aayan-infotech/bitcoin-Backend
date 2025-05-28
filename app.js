@@ -7,21 +7,19 @@ const cors = require("cors");
 const routes = require("./routes");
 const { connectToDb } = require("./config/mongoDb");
 const helmet = require("helmet");
+const { getSecrets } = require("./config/awsSecrets");
 
-const PORT = process.env.PORT || 3210;
-const  app = express();
-const server = http.createServer(app); // Create an HTTP server
+const app = express();
+const server = http.createServer(app);
 
-// 🔹 CORS Configuration
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS || "*",  
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE",  "OPTIONS"],
+  origin: "*",
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
-
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -30,12 +28,17 @@ app.use(helmet());
 
 app.use("/api", routes);
 
-server.listen(PORT, async () => {
+(async () => {
   try {
-    await connectToDb();
-    console.log(`🚀 Server running on PORT ${PORT}`);
+    const secrets = await getSecrets(); // Load secrets
+    const PORT = process.env.PORT || secrets.PORT || 3210;
+
+    await connectToDb(); // Connect to DB
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on PORT ${PORT}`);
+    });
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
+    console.error("❌ Server initialization failed:", error);
     process.exit(1);
   }
-});
+})();

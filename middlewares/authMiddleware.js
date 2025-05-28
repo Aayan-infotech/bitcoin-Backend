@@ -1,8 +1,20 @@
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/userModel");
+const { getSecrets } = require("../config/awsSecrets");
 
+let secretsCache = null;
+
+async function initSecrets() {
+  if (!secretsCache) {
+    secretsCache = await getSecrets();
+  }
+}
+
+// Middleware: Authenticate any logged-in user
 exports.auth = async (req, res, next) => {
   try {
+    await initSecrets();
+
     const token =
       req.cookies.token ||
       req.body.token ||
@@ -13,12 +25,13 @@ exports.auth = async (req, res, next) => {
     }
 
     try {
-      req.user = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = jwt.verify(token, secretsCache.JWT_SECRET);
       next();
-    } catch {
-      return res.status(404).json({ success: false, message: "Invalid token" });
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "Invalid token" });
     }
-  } catch {
+  } catch (err) {
+    console.error("Auth middleware error:", err);
     return res.status(500).json({
       success: false,
       message: "Error validating token",
@@ -26,8 +39,11 @@ exports.auth = async (req, res, next) => {
   }
 };
 
+// Middleware: Ensure user is an admin
 exports.isAdmin = async (req, res, next) => {
   try {
+    await initSecrets();
+
     const token =
       req.cookies.token ||
       req.body.token ||
@@ -37,34 +53,27 @@ exports.isAdmin = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Token missing" });
     }
 
-    try {
-      const userPayload = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await userModel.findById(userPayload.id);
-      // console.log(user);
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      }
+    const userPayload = jwt.verify(token, secretsCache.JWT_SECRET);
+    const user = await userModel.findById(userPayload.id);
 
-      // if (user.userType?.toLowerCase() !== "admin") {
-      //   return res.status(401).json({
-      //     success: false,
-      //     message: "You are not authorized to make this request!",
-      //   });
-      // }
-
-      req.user = user; // optional, pass user forward
-      next();
-    } catch (err) {
-      console.error("JWT verification failed:", err);
-      return res.status(401).json({ success: false, message: "Invalid token" });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
+
+    if (user.userType?.toLowerCase() !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "You are not authorized to make this request!",
+      });
+    }
+
+    req.user = user;
+    next();
   } catch (err) {
-    console.error("Middleware error:", err);
+    console.error("Admin check failed:", err);
     return res.status(500).json({
       success: false,
-      message: "Error validating token",
+      message: "Error validating token or user role",
     });
   }
 };
