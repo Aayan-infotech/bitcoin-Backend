@@ -60,7 +60,7 @@ exports.isAdmin = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (user.userType?.toLowerCase() !== "admin") {
+    if (user.accountType?.toLowerCase() !== "admin") {
       return res.status(401).json({
         success: false,
         message: "You are not authorized to make this request!",

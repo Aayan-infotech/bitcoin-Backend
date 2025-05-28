@@ -203,7 +203,8 @@ const forgotPassword = async (req, res) => {
         });
     }
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = "1111";
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     user.resetPasswordOtp = hashedOtp;

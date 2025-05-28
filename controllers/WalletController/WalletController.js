@@ -3,7 +3,7 @@ const {
   sendTransaction,
   getTransaction,
   getBalance,
-  provider,
+  getProvider, 
 } = require("../../service/etheriumService");
 const { saveTransactionReceipt } = require("../../utils/fileStorage");
 const { ethers } = require("ethers");
@@ -13,28 +13,28 @@ exports.sendCoins = async (req, res) => {
     const { userId, amount } = req.body;
 
     if (!userId) {
-      return res.status(400).json({
-        message: "User id of the user is required",
-      });
+      return res.status(400).json({ message: "User ID is required" });
     }
     if (!amount) {
-      return res
-        .status(400)
-        .json({ error: "Amount is missing" });
+      return res.status(400).json({ error: "Amount is missing" });
     }
-    const user =await User.findById(userId)
+
+    const user = await User.findById(userId);
+    if (!user || !user.wallet_address) {
+      return res.status(404).json({ error: "User or wallet address not found" });
+    }
 
     const tx = await sendTransaction(user.wallet_address, amount);
-
     const receipt = await tx.wait();
 
+    const provider = await getProvider(); // ✅ Get initialized provider
     const gasPrice = await provider.getGasPrice();
     const gasUsed = receipt.gasUsed;
     const totalFee = gasPrice.mul(gasUsed); // BigNumber
 
-    saveTransactionReceipt({
+    await saveTransactionReceipt({
       from: tx.from,
-      to,
+      to: user.wallet_address,
       hash: tx.hash,
       blockNumber: receipt.blockNumber,
       gasUsed: gasUsed.toString(),
@@ -70,14 +70,20 @@ exports.checkTransaction = async (req, res) => {
     res.status(404).json({ error: "Transaction not found" });
   }
 };
+
 exports.getBalanceForAddress = async (address) => {
-  const balance = await getBalance(address);
-  return balance;
+  return await getBalance(address);
 };
+
 exports.getUserBalance = async (req, res) => {
   try {
     const userId = req.user.id;
     const { address } = req.params;
+
+    if (!address) {
+      return res.status(400).json({ error: "Address is required" });
+    }
+
     const balance = await getBalance(address);
     res.status(200).json({ address, balance });
   } catch (err) {

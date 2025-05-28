@@ -54,9 +54,16 @@ async function getBalance(address) {
   return ethers.utils.formatEther(balance);
 }
 
+async function getProvider() {
+  await init();
+  if (!provider) throw new Error("Ethereum provider not initialized");
+  return provider;
+}
+
 module.exports = {
   createWallet,
   sendTransaction,
   getTransaction,
   getBalance,
+  getProvider, 
 };
