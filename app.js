@@ -8,7 +8,7 @@ const routes = require("./routes");
 const { connectToDb } = require("./config/mongoDb");
 const helmet = require("helmet");
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3210;
 const  app = express();
 const server = http.createServer(app); // Create an HTTP server
 
