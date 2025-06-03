@@ -92,12 +92,19 @@ exports.submitQuizAnswers = async (req, res) => {
       message: "Quiz submitted successfully",
       score,
       totalQuestions,
+      correctAnswers: score,
+      pointsEarned:score,
+      wrongAnswers: totalQuestions - score,
       percentage: `${percentage}%`,
     });
   } catch (error) {
     res
       .status(500)
-      .json({ success: false, message: "Error submitting quiz", error:error.message });
+      .json({
+        success: false,
+        message: "Error submitting quiz",
+        error: error.message,
+      });
   }
 };
 // Get a user's quiz progress
