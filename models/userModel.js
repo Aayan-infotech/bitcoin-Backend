@@ -38,12 +38,15 @@ const UserSchema = new Schema(
     quizPoints: { type: String },
     cryptoBalance: { type: String },
     mpinHash: { type: String }, // ✅ New field
-
+    mpinResetOtp: { type: String, select: false },
+    mpinResetExpires: { type: Date },
     linkedCards: [{ type: mongoose.Schema.Types.ObjectId, ref: "Card" }],
     emailVerificationOtp: { type: String },
     emailVerificationExpires: { type: Date },
     isEmailVerified: { type: Boolean, default: false },
-    courseProgress: [{ type: mongoose.Schema.Types.ObjectId, ref: "courseProgress" }],
+    courseProgress: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "courseProgress" },
+    ],
     Courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
     Quizzes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Quiz" }],
     deviceToken: { type: String },

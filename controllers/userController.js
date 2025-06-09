@@ -1,6 +1,8 @@
 const User = require("../models/userModel");
 const Transaction = require("../models/paymentRelated/TransactioModel");
 const { getBalanceForAddress } = require("./WalletController/WalletController");
+const crypto = require("crypto");
+const sendEmail = require("../config/sendMail"); // Your existing email logic
 
 const getAllUsers = async (req, res) => {
   try {
@@ -99,7 +101,9 @@ const verifyMPIN = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user || !user.mpinHash) {
-      return res.status(404).json({ message: "MPIN not set or user not found" });
+      return res
+        .status(404)
+        .json({ message: "MPIN not set or user not found" });
     }
 
     const isValid = await user.verifyMPIN(mpin);
@@ -113,7 +117,67 @@ const verifyMPIN = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+const requestMPINReset = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const user = await User.findById(userId);
 
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otp = '111111' // 6-digit OTP
+    const otpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.mpinResetOtp = otp;
+    user.mpinResetExpires = new Date(otpExpire);
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: "MPIN Reset OTP",
+      text: `Your MPIN reset OTP is: ${otp}. It expires in 10 minutes.`,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "OTP sent to email" });
+  } catch (error) {
+    console.error("Error requesting MPIN reset:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+const resetMPINWithOtp = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const {  otp, newMpin } = req.body;
+
+    if (!/^\d{4}$/.test(newMpin)) {
+      return res.status(400).json({ message: "MPIN must be exactly 4 digits" });
+    }
+
+    const user = await User.findById(userId).select("+mpinResetOtp +mpinResetExpires +mpinHash");
+
+    if (!user || user.mpinResetOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.mpinResetExpires < new Date()) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    await user.setMPIN(newMpin);
+    user.mpinResetOtp = undefined;
+    user.mpinResetExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: "MPIN reset successfully" });
+  } catch (error) {
+    console.error("Error resetting MPIN:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 const getDashboardData = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -150,7 +214,7 @@ const getDashboardData = async (req, res) => {
       updatedAt: user.updatedAt,
       biometricAuth: user.biometricAuth,
       notification: user.notificationPreferences,
-      mpin: user.mpinHash?true:false,
+      mpin: user.mpinHash ? true : false,
     };
 
     res.status(200).json({
@@ -166,6 +230,8 @@ const getDashboardData = async (req, res) => {
 };
 
 module.exports = {
+  resetMPINWithOtp,
+  requestMPINReset,
   setMPIN,
   verifyMPIN,
   getAllUsers,
