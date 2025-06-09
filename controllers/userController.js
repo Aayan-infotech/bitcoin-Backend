@@ -228,8 +228,47 @@ const getDashboardData = async (req, res) => {
       .json({ error: "Failed to fetch dashboard data", err });
   }
 };
+const getUserTransactionHistory = async (req, res) => {
+  try {
+    const userId = req.user.id; // You mentioned this is how you're getting the user ID
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const walletAddress = user.wallet_address;
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "User does not have a wallet address",
+      });
+    }
+
+    const transactions = await Transaction.find({
+      from: walletAddress,
+    }).sort({ timestamp: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      data: transactions,
+    });
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 module.exports = {
+  getUserTransactionHistory,
+  getUserTransactionHistory,
   resetMPINWithOtp,
   requestMPINReset,
   setMPIN,

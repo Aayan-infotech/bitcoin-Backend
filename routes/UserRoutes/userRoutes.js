@@ -1,5 +1,5 @@
 const express=require("express")
-const { getAllUsers, updateProfile, getDashboardData, getAllNotificationUsers, setMPIN, verifyMPIN, requestMPINReset, resetMPINWithOtp } = require("../../controllers/userController")
+const { getAllUsers, updateProfile, getDashboardData, getAllNotificationUsers, setMPIN, verifyMPIN, requestMPINReset, resetMPINWithOtp, getUserTransactionHistory } = require("../../controllers/userController")
 const { uploadToS3 } = require("../../config/s3Setup")
 const { auth } = require("../../middlewares/authMiddleware")
 const { updateBiometric } = require("../../controllers/authController")
@@ -15,5 +15,6 @@ router.post("/mpin/request-reset",auth, requestMPINReset);
 router.post("/mpin/reset",auth, resetMPINWithOtp);
 router.get("/get-user-dashboard",auth,getDashboardData)
 router.put("/update-biometric",auth, updateBiometric);
+router.get("/transaction-history",auth, getUserTransactionHistory);
 
 module.exports=router
