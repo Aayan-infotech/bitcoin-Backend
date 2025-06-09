@@ -64,6 +64,55 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+const setMPIN = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    const { mpin } = req.body;
+    if (!mpin || typeof mpin !== "string" || mpin.length !== 4) {
+      return res.status(400).json({
+        message: "Invalid MPIN format or MPIN is NULL",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.setMPIN(mpin);
+    await user.save();
+
+    return res.json({ success: true, message: "MPIN set successfully" });
+  } catch (error) {
+    console.error("Error while setting MPIN:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+const verifyMPIN = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { mpin } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user || !user.mpinHash) {
+      return res.status(404).json({ message: "MPIN not set or user not found" });
+    }
+
+    const isValid = await user.verifyMPIN(mpin);
+    if (!isValid) {
+      return res.status(401).json({ message: "Invalid MPIN" });
+    }
+
+    return res.json({ success: true, message: "MPIN verified" });
+  } catch (error) {
+    console.error("Error verifying MPIN:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 const getDashboardData = async (req, res) => {
   try {
@@ -101,6 +150,7 @@ const getDashboardData = async (req, res) => {
       updatedAt: user.updatedAt,
       biometricAuth: user.biometricAuth,
       notification: user.notificationPreferences,
+      mpin: user.mpinHash?true:false,
     };
 
     res.status(200).json({
@@ -116,6 +166,8 @@ const getDashboardData = async (req, res) => {
 };
 
 module.exports = {
+  setMPIN,
+  verifyMPIN,
   getAllUsers,
   getAllNotificationUsers,
   updateProfile,
