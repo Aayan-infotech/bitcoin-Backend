@@ -9,8 +9,8 @@ router.get('/balance/:address',isAdmin, controller.getUserBalance);
 router.get('/pending-requests',isAdmin, controller.getPendingRewardClaims);
 router.get('/approve-request:/claimId',isAdmin, controller.approveClaim);
 router.post('/transfer-users', controller.sendCoinsUsers);
-router.get('/balance-users/:address', controller.getUserBalanceNew);
-router.post('/transaction/list', controller.getAllTransaction);
+// router.get('/balance-users/:address', controller.getUserBalanceNew);
+// router.post('/transaction/list', controller.getAllTransaction);
 
 module.exports =router;
 

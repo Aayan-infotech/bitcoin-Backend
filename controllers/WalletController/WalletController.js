@@ -153,6 +153,38 @@ exports.sendCoinsUsers = async (req, res) => {
       return res.status(400).json({ error: "Sender private key is missing" });
     }
     encryptedKey1 = userFrom.private_key_encrypted;
+    //console.log("Encrypted key:", encryptedKey1, "Type:", typeof encryptedKey1);
+ 
+    // Parse and decrypt private key
+    // let encryptedKey1;
+    // let encryptedKey;
+    // try {
+    //   encryptedKey = JSON.parse(userFrom.private_key_encrypted);
+    // } catch (err) {
+    //   return res.status(400).json({ error: "Invalid encrypted key format" });
+    // }
+ 
+    // if (!encryptedKey.iv || !encryptedKey.content) {
+    //   return res.status(400).json({ error: "Encrypted key missing iv or content" });
+    // }
+ 
+    // let decryptedKey;
+    // try {
+    //   decryptedKey = decrypt(encryptedKey);
+    // } catch (err) {
+    //   return res.status(400).json({ error: "Failed to decrypt key", details: err.message });
+    // }
+ 
+    // // Ensure key is properly formatted
+    // if (!/^0x[0-9a-fA-F]{64}$/.test(decryptedKey)) {
+    //   decryptedKey = "0x" + Buffer.from(decryptedKey).toString("hex");
+    // }
+ 
+    // console.log("Decrypted key:", decryptedKey, "Type:", typeof decryptedKey);
+    // if (!/^0x[0-9a-fA-F]{64}$/.test(decryptedKey)) {
+    //   return res.status(400).json({ error: "Invalid decrypted private key format" });
+    // }
+ 
     // Send transaction
     const tx = await sendTransactionUser(encryptedKey1, userIdTo, amount);
     const receipt = await tx.wait();
