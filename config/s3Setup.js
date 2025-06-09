@@ -8,13 +8,12 @@ const {
 
 // Initialize AWS Secrets Manager
 const secretsManagerClient = new SecretsManagerClient({
-  region:'us-east-1',
+  region: "us-east-1",
 });
 
 // Fetch AWS credentials from Secrets Manager
-const getAwsCredentials = async (req,res) => {
+const getAwsCredentials = async (req, res) => {
   try {
-    
     const command = new GetSecretValueCommand({ SecretId: "aws-secret" });
     const data = await secretsManagerClient.send(command);
 
@@ -22,7 +21,7 @@ const getAwsCredentials = async (req,res) => {
       const secret = JSON.parse(data.SecretString);
       return {
         accessKeyId: secret.AWS_ACCESS_KEY_ID,
-        secretAccessKey:secret.AWS_SECRET_ACCESS_KEY,
+        secretAccessKey: secret.AWS_SECRET_ACCESS_KEY,
       };
     }
   } catch (error) {
@@ -34,7 +33,7 @@ const getAwsCredentials = async (req,res) => {
 };
 
 // Initialize S3 Client
-const getS3Client = async (req,res) => {
+const getS3Client = async (req, res) => {
   try {
     const credentials = await getAwsCredentials();
     return new S3({
@@ -42,18 +41,18 @@ const getS3Client = async (req,res) => {
         accessKeyId: credentials.accessKeyId,
         secretAccessKey: credentials.secretAccessKey,
       },
-      region:'us-east-1',
+      region: "us-east-1",
     });
   } catch (error) {
     return res.status(403).json({
       success: false,
-      message:error.message,
+      message: error.message,
     });
   }
 };
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).array("files", 5); 
+const upload = multer({ storage }).array("files", 5);
 
 const uploadToS3 = async (req, res, next) => {
   upload(req, res, async (err) => {
@@ -86,7 +85,7 @@ const uploadToS3 = async (req, res, next) => {
       req.fileLocations = fileLocations;
       next();
     } catch (uploadError) {
-      return res.status(500).send(uploadError);
+      return res.status(500).json({ message: "error", uploadError });
     }
   });
 };

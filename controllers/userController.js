@@ -60,7 +60,7 @@ const updateProfile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error occurred while updating user profile",
-      error: error.message,
+      error: error,
     });
   }
 };
