@@ -2,6 +2,7 @@ const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const Quiz = require("../../models/QuizRelated/QuizModel");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
+const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
 
 // Start a quiz attempt
 exports.startQuiz = async (req, res) => {
@@ -121,7 +122,55 @@ exports.getUserAttempts = async (req, res) => {
       .status(500)
       .json({ success: false, message: "Error fetching progress", error });
   }
+};// controllers/quizController.js
+
+exports.claimQuizReward = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // const userId = "67ab32f7f4a584223231f305";
+    const { quizId } = req.body;
+
+    if (!quizId) {
+      return res.status(400).json({ success: false, message: "Quiz ID is required" });
+    }
+
+    const attempt = await QuizAttempt.findOne({ userId, quizId });
+
+    if (!attempt) {
+      return res.status(404).json({ success: false, message: "Quiz attempt not found" });
+    }
+// ****************************** to be uncommented when everything is tested*************************
+
+
+    // if (attempt.rewardClaimed) {
+    //   return res.status(400).json({ success: false, message: "Reward already claimed" });
+    // }
+
+    // const existingClaim = await RewardClaimRequest.findOne({ user: userId, quizId });
+    // if (existingClaim) {
+    //   return res.status(400).json({ success: false, message: "Reward claim already requested" });
+    // }
+
+    await RewardClaimRequest.create({
+      user: userId,
+      quizId,
+      score: attempt.score,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Reward claim submitted for admin approval.",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit reward claim",
+      error: err.message,
+    });
+  }
 };
+
+
 
 exports.getLeaderboard = async (req, res) => {
   try {

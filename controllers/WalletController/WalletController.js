@@ -1,4 +1,6 @@
+const RewardClaimRequestModel = require("../../models/RewardClaimRequestModel");
 const User = require("../../models/userModel");
+const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
 const {
   sendTransaction,
   getTransaction,
@@ -88,5 +90,37 @@ exports.getUserBalance = async (req, res) => {
     res.status(200).json({ address, balance });
   } catch (err) {
     res.status(500).json({ error: "Could not retrieve balance" });
+  }
+};
+exports.getPendingRewardClaims = async (req, res) => {
+  try {
+    const claims = await RewardClaimRequestModel.find({ status: "Pending" });
+    res.status(200).json({ success: true, claims });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch claims", error: error.message });
+  }
+};
+exports.approveClaim = async (req, res) => {
+  try {
+    const { claimId } = req.params;
+
+    const claim = await RewardClaimRequest.findById(claimId);
+    if (!claim || claim.status !== "Pending") {
+      return res.status(400).json({ success: false, message: "Invalid claim" });
+    }
+
+    // Update user points
+    await User.findByIdAndUpdate(claim.user, { $inc: { quizPoints: claim.score } });
+
+    // Update claim status
+    claim.status = "Approved";
+    await claim.save();
+
+    // Optionally update original attempt
+    await QuizAttempt.findOneAndUpdate({ userId: claim.user, quizId: claim.quizId }, { rewardClaimed: true });
+
+    res.status(200).json({ success: true, message: "Claim approved and points granted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to approve claim", error: error.message });
   }
 };

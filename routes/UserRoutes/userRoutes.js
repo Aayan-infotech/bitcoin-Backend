@@ -3,6 +3,7 @@ const { getAllUsers, updateProfile, getDashboardData, getAllNotificationUsers, s
 const { uploadToS3 } = require("../../config/s3Setup")
 const { auth } = require("../../middlewares/authMiddleware")
 const { updateBiometric } = require("../../controllers/authController")
+const { claimQuizReward } = require("../../controllers/QuizRelated/quizProgress")
 const router=express.Router()
 
 router.get("/get-all-user",getAllUsers)
@@ -16,5 +17,6 @@ router.post("/mpin/reset",auth, resetMPINWithOtp);
 router.get("/get-user-dashboard",auth,getDashboardData)
 router.put("/update-biometric",auth, updateBiometric);
 router.get("/transaction-history",auth, getUserTransactionHistory);
+router.post("/claim-reward", auth, claimQuizReward);
 
 module.exports=router

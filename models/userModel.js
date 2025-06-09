@@ -35,7 +35,7 @@ const UserSchema = new Schema(
       unique: true,
     },
     level: { type: String },
-    quizPoints: { type: String },
+    quizPoints: { type: Number, default: 0 },
     cryptoBalance: { type: String },
     mpinHash: { type: String }, // ✅ New field
     mpinResetOtp: { type: String, select: false },
