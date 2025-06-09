@@ -13,16 +13,16 @@ const userSignup = async (req, res, next) => {
   try {
     const { name, email, password, mobileNumber, gender, accountType } =
       req.body;
-
+ 
     if (!name || !email || !password || !mobileNumber || !gender) {
       return res
         .status(400)
         .json({ message: "Please fill all the required fields" });
     }
-
+ 
     let user = await User.findOne({ email }).select("+password");
     const otp = "1111";
-
+ 
     const emailTemplate = (otp) => `
       <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
         <h2 style="color: #007bff;">Email Verification OTP</h2>
@@ -33,14 +33,14 @@ const userSignup = async (req, res, next) => {
         <p style="font-size: 12px; color: #777;">If you did not request this, please ignore this email.</p>
       </div>
     `;
-
+ 
     if (user) {
       if (!user.isEmailVerified) {
         user.emailVerificationOtp = otp;
         user.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
         await sendEmail(email, "Verify Your Email", emailTemplate(otp));
-
+ 
         return res.status(200).json({
           success: true,
           message:
@@ -49,11 +49,12 @@ const userSignup = async (req, res, next) => {
       }
       return res.status(400).json({ message: "Email is already in use" });
     }
-
+ 
     const hashedPassword = await bcrypt.hash(password, 10);
     const wallet = createWallet();
-    const encryptedKey = encrypt(wallet.privateKey);
-
+    // const encryptedKey = encrypt(wallet.privateKey);
+    const encryptedKey = wallet.privateKey;
+ 
     const newUser = new User({
       name,
       email,
@@ -62,14 +63,15 @@ const userSignup = async (req, res, next) => {
       gender,
       accountType: accountType || "Personal",
       wallet_address: wallet.address,
-      private_key_encrypted: JSON.stringify(encryptedKey),
+      // private_key_encrypted: JSON.stringify(encryptedKey),
+      private_key_encrypted: encryptedKey,
       emailVerificationOtp: otp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000,
     });
-
+ 
     await newUser.save();
     await sendEmail(email, "Verify Your Email", emailTemplate(otp));
-
+ 
     return res.status(201).json({
       success: true,
       message: "User signup successful. Verification email sent.",

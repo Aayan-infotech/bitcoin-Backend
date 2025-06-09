@@ -16,6 +16,19 @@ async function init() {
   }
 }
 
+async function getUserWallet(userFromDecryptedKey) {
+  await init();
+  return new ethers.Wallet(userFromDecryptedKey, provider);
+}
+ 
+async function sendTransactionUser(userFromDecryptedKey, to, amountInEther) {
+  const wallet = await getUserWallet(userFromDecryptedKey);
+  const tx = await wallet.sendTransaction({
+    to,
+    value: ethers.utils.parseEther(amountInEther),
+  });
+  return tx;
+}
 // Create new random wallet
 function createWallet() {
   const wallet = ethers.Wallet.createRandom();
@@ -63,7 +76,9 @@ async function getProvider() {
 module.exports = {
   createWallet,
   sendTransaction,
+  sendTransactionUser,
   getTransaction,
   getBalance,
-  getProvider, 
+  getProvider,
 };
+
