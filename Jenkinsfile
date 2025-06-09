@@ -7,7 +7,7 @@ pipeline {
         HOST_PORT = "3210"
         DOCKER_HUB_USERNAME = credentials('docker-hub-username')
         DOCKER_HUB_PASSWORD = credentials('docker-hub-password')
-        EMAIL_RECIPIENTS = "ujjwal.singh@aayaninfotech.com"
+        EMAIL_RECIPIENTS = "anurag.yadav@aayaninfotech.com"
         SONARTOKEN = credentials('sonartoken')
         AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
@@ -165,7 +165,7 @@ pipeline {
                     """,
                     to: "${EMAIL_RECIPIENTS}",
                     from: "development.aayanindia@gmail.com",
-                    replyTo: "ujjwal.singh@aayaninfotech.com",
+                    replyTo: "anurag.yadav@aayaninfotech.com",
                     mimeType: 'text/html'
                 )
             }
@@ -188,7 +188,7 @@ pipeline {
                     attachLog: true,
                     to: "${EMAIL_RECIPIENTS}",
                     from: "development.aayanindia@gmail.com",
-                    replyTo: "ujjwal.singh@aayaninfotech.com",
+                    replyTo: "anurag.yadav@aayaninfotech.com",
                     mimeType: 'text/html'
                 )
             }
