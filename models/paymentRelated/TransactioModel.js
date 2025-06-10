@@ -10,8 +10,8 @@ const transactionSchema = new mongoose.Schema({
   totalFee: String,
   amount: String,
   status: { type: String, enum: ['Success', 'Failed'] },
-  receiverName: { type: String, required: true },
-  amountInUsd: { type: String, required: true },
+  receiverName: { type: String, required: false },
+  amountInUsd: { type: String, required: false },
   timestamp: { type: Date, default: Date.now }
 });
 
