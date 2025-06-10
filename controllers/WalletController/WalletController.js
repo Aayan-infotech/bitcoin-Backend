@@ -128,7 +128,8 @@ exports.approveClaim = async (req, res) => {
 
 exports.sendCoinsUsers = async (req, res) => {
   try {
-    const { userIdFrom, userIdTo, amount } = req.body;
+    const userIdFrom = req.user.id;
+    const { userIdTo, amount } = req.body;
  
     // Validate inputs
     if (!userIdFrom || !userIdTo || !amount) {

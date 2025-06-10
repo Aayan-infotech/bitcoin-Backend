@@ -13,7 +13,7 @@ exports.createAlphabet = async (req, res) => {
       });
     }
 
-    const newAlphabet = new Alphabet({ alphabet, description, image, examples, relatedTerms });
+    const newAlphabet = new Alphabet({ alphabet, title, description, image, examples, relatedTerms });
     await newAlphabet.save();
 
     res.status(201).json({
