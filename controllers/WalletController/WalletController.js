@@ -95,7 +95,7 @@ exports.getUserBalance = async (req, res) => {
 };
 exports.getPendingRewardClaims = async (req, res) => {
   try {
-    const claims = await RewardClaimRequestModel.find({ status: "Pending" });
+    const claims = await RewardClaimRequestModel.find({ status: "Pending" }).populate('user', 'name');
     res.status(200).json({ success: true, claims });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch claims", error: error.message });
