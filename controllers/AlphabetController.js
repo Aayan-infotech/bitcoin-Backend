@@ -6,10 +6,10 @@ exports.createAlphabet = async (req, res) => {
     const { alphabet, title, description, examples, relatedTerms } = req.body;
     const image = req?.fileLocations?.[0] || ""; // Handle optional image upload
 
-    if (!alphabet || !title || !description) {
+    if (!alphabet || !description) {
       return res.status(400).json({
         success: false,
-        message: "Alphabet, title, and description are required fields.",
+        message: "Alphabet and description are required fields.",
       });
     }
 
