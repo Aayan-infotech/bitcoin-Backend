@@ -129,7 +129,7 @@ exports.approveClaim = async (req, res) => {
 exports.sendCoinsUsers = async (req, res) => {
   try {
     const userIdFrom = req.user.id;
-    const { userIdTo, amount } = req.body;
+    const { receiverName, userIdTo, amount, amountInUsd } = req.body;
  
     // Validate inputs
     if (!userIdFrom || !userIdTo || !amount) {
@@ -207,6 +207,8 @@ exports.sendCoinsUsers = async (req, res) => {
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
       amount: amount + " ETH",
       status: receipt.status === 1 ? "Success" : "Failed",
+      receiverName: receiverName,
+      amountInUsd: amountInUsd,
       timestamp: new Date().toISOString(),
     });
  
@@ -218,6 +220,7 @@ exports.sendCoinsUsers = async (req, res) => {
       gasUsed: gasUsed.toString(),
       gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
       amount: amount + " ETH",
+      amountInUsd: amountInUsd,
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
       status: receipt.status === 1 ? "Success" : "Failed",
     });
