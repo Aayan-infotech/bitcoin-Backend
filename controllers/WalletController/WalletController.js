@@ -7,7 +7,7 @@ const {
   getTransaction,
   getBalance,
   getProvider,
-  sendTransactionUser, 
+  sendTransactionUser,
 } = require("../../service/etheriumService");
 const { saveTransactionReceipt } = require("../../utils/fileStorage");
 const { ethers } = require("ethers");
@@ -25,7 +25,9 @@ exports.sendCoins = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user || !user.wallet_address) {
-      return res.status(404).json({ error: "User or wallet address not found" });
+      return res
+        .status(404)
+        .json({ error: "User or wallet address not found" });
     }
 
     const tx = await sendTransaction(user.wallet_address, amount);
@@ -96,29 +98,47 @@ exports.getUserBalance = async (req, res) => {
 };
 exports.getPendingRewardClaims = async (req, res) => {
   try {
-    const claims = await RewardClaimRequestModel.find().populate('user', 'name');
+    const claims = await RewardClaimRequestModel.find().populate(
+      "user",
+      "name"
+    );
     res.status(200).json({ success: true, claims });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch claims", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to fetch claims",
+        error: error.message,
+      });
   }
 };
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
-    const { amount } = req.body;
-
+    // const { amount } = req.body;
+    const amount = "0.00001";
     if (!amount) {
-      return res.status(400).json({ success: false, message: "Amount is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Amount is required" });
     }
 
     const claim = await RewardClaimRequest.findById(claimId);
     if (!claim || claim.status !== "Pending") {
-      return res.status(400).json({ success: false, message: "Invalid or already processed claim" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Invalid or already processed claim",
+        });
     }
 
     const user = await User.findById(claim.user);
     if (!user || !user.wallet_address) {
-      return res.status(404).json({ success: false, message: "User or wallet address not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User or wallet address not found" });
     }
 
     const tx = await sendTransaction(user.wallet_address, amount);
@@ -142,7 +162,9 @@ exports.approveClaim = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    await User.findByIdAndUpdate(user._id, { $inc: { quizPoints: claim.score } });
+    await User.findByIdAndUpdate(user._id, {
+      $inc: { quizPoints: claim.score },
+    });
 
     claim.status = "Approved";
     await claim.save();
@@ -168,37 +190,40 @@ exports.approveClaim = async (req, res) => {
   }
 };
 
-
 exports.sendCoinsUsers = async (req, res) => {
   try {
     const userIdFrom = req.user.id;
     const { receiverName, userIdTo, amount, amountInUsd } = req.body;
- 
+
     // Validate inputs
     if (!userIdFrom || !userIdTo || !amount) {
-      return res.status(400).json({ error: "userIdFrom, userIdTo, and amount are required" });
+      return res
+        .status(400)
+        .json({ error: "userIdFrom, userIdTo, and amount are required" });
     }
- 
+
     // Get sender and receiver
     const userFrom = await User.findById(userIdFrom);
     // const userFrom = await User.find({ wallet_address : userIdFrom });
     // const userTo = await User.find({ wallet_address : userIdTo });
     // const userTo = await User.findById(userIdTo);
- 
+
     if (!userFrom || !userFrom.wallet_address) {
-      return res.status(404).json({ error: "Sender or wallet address not found" });
+      return res
+        .status(404)
+        .json({ error: "Sender or wallet address not found" });
     }
- 
+
     // if (!userTo || !userTo.wallet_address) {
     //   return res.status(404).json({ error: "Receiver or wallet address not found" });
     // }
- 
+
     if (!userFrom.private_key_encrypted) {
       return res.status(400).json({ error: "Sender private key is missing" });
     }
     encryptedKey1 = userFrom.private_key_encrypted;
     //console.log("Encrypted key:", encryptedKey1, "Type:", typeof encryptedKey1);
- 
+
     // Parse and decrypt private key
     // let encryptedKey1;
     // let encryptedKey;
@@ -207,38 +232,38 @@ exports.sendCoinsUsers = async (req, res) => {
     // } catch (err) {
     //   return res.status(400).json({ error: "Invalid encrypted key format" });
     // }
- 
+
     // if (!encryptedKey.iv || !encryptedKey.content) {
     //   return res.status(400).json({ error: "Encrypted key missing iv or content" });
     // }
- 
+
     // let decryptedKey;
     // try {
     //   decryptedKey = decrypt(encryptedKey);
     // } catch (err) {
     //   return res.status(400).json({ error: "Failed to decrypt key", details: err.message });
     // }
- 
+
     // // Ensure key is properly formatted
     // if (!/^0x[0-9a-fA-F]{64}$/.test(decryptedKey)) {
     //   decryptedKey = "0x" + Buffer.from(decryptedKey).toString("hex");
     // }
- 
+
     // console.log("Decrypted key:", decryptedKey, "Type:", typeof decryptedKey);
     // if (!/^0x[0-9a-fA-F]{64}$/.test(decryptedKey)) {
     //   return res.status(400).json({ error: "Invalid decrypted private key format" });
     // }
- 
+
     // Send transaction
     const tx = await sendTransactionUser(encryptedKey1, userIdTo, amount);
     const receipt = await tx.wait();
- 
+
     // Get gas fee
     const provider = await getProvider();
     const gasPrice = await provider.getGasPrice();
     const gasUsed = receipt.gasUsed;
     const totalFee = gasPrice.mul(gasUsed);
- 
+
     // Save transaction
     await saveTransactionReceipt({
       from: userFrom.wallet_address,
@@ -254,7 +279,7 @@ exports.sendCoinsUsers = async (req, res) => {
       amountInUsd: amountInUsd,
       timestamp: new Date().toISOString(),
     });
- 
+
     // Success response
     res.status(200).json({
       message: "Transaction successful",
@@ -267,7 +292,6 @@ exports.sendCoinsUsers = async (req, res) => {
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
       status: receipt.status === 1 ? "Success" : "Failed",
     });
- 
   } catch (err) {
     console.error("Transaction error:", err);
     res.status(500).json({ error: "Transaction failed", details: err.message });
