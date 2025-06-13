@@ -1,6 +1,7 @@
 const RewardClaimRequestModel = require("../../models/RewardClaimRequestModel");
 const User = require("../../models/userModel");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
+const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const {
   sendTransaction,
   getTransaction,
@@ -95,7 +96,7 @@ exports.getUserBalance = async (req, res) => {
 };
 exports.getPendingRewardClaims = async (req, res) => {
   try {
-    const claims = await RewardClaimRequestModel.find({ status: "Pending" }).populate('user', 'name');
+    const claims = await RewardClaimRequestModel.find().populate('user', 'name');
     res.status(200).json({ success: true, claims });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch claims", error: error.message });
@@ -104,27 +105,75 @@ exports.getPendingRewardClaims = async (req, res) => {
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
+    const { amount } = req.body; // amount to send as crypto
+
+    if (!amount) {
+      return res.status(400).json({ success: false, message: "Amount is required" });
+    }
 
     const claim = await RewardClaimRequest.findById(claimId);
     if (!claim || claim.status !== "Pending") {
-      return res.status(400).json({ success: false, message: "Invalid claim" });
+      return res.status(400).json({ success: false, message: "Invalid or already processed claim" });
     }
 
-    // Update user points
-    await User.findByIdAndUpdate(claim.user, { $inc: { quizPoints: claim.score } });
+    const user = await User.findById(claim.user);
+    if (!user || !user.wallet_address) {
+      return res.status(404).json({ success: false, message: "User or wallet address not found" });
+    }
 
-    // Update claim status
+    // 🪙 Send coins
+    const tx = await sendTransaction(user.wallet_address, amount);
+    const receipt = await tx.wait();
+
+    // 🔍 Calculate fees
+    const provider = await getProvider();
+    const gasPrice = await provider.getGasPrice();
+    const gasUsed = receipt.gasUsed;
+    const totalFee = gasPrice.mul(gasUsed);
+
+    // 💾 Save the transaction
+    await saveTransactionReceipt({
+      from: tx.from,
+      to: user.wallet_address,
+      hash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: gasUsed.toString(),
+      gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
+      totalFee: ethers.utils.formatEther(totalFee) + " ETH",
+      amount: amount + " ETH",
+      status: receipt.status === 1 ? "Success" : "Failed",
+      timestamp: new Date().toISOString(),
+    });
+
+    // 🎯 Update user points
+    await User.findByIdAndUpdate(user._id, { $inc: { quizPoints: claim.score } });
+
+    // ✅ Mark claim as approved
     claim.status = "Approved";
     await claim.save();
 
-    // Optionally update original attempt
-    await QuizAttempt.findOneAndUpdate({ userId: claim.user, quizId: claim.quizId }, { rewardClaimed: true });
+    // 📝 Update quiz attempt
+    await QuizAttempt.findOneAndUpdate(
+      { userId: user._id, quizId: claim.quizId },
+      { rewardClaimed: true }
+    );
 
-    res.status(200).json({ success: true, message: "Claim approved and points granted" });
+    res.status(200).json({
+      success: true,
+      message: "Claim approved, points granted, and crypto sent",
+      transactionHash: tx.hash,
+      amountSent: amount,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to approve claim", error: error.message });
+    console.error("Error approving claim:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve claim and send coins",
+      error: error.message,
+    });
   }
 };
+
 
 exports.sendCoinsUsers = async (req, res) => {
   try {

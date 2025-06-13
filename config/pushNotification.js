@@ -6,7 +6,7 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
   try {
     const ids = Array.isArray(userIds) ? userIds : [userIds];
 
-    // Step 1: Create and save all notifications in the DB
+    // Step 1: Save all notifications in DB
     const notificationsToInsert = ids.map((userId) => ({
       userId,
       message,
@@ -17,11 +17,16 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
 
     const savedNotifications = await Notification.insertMany(notificationsToInsert);
 
-    // Step 2: Try sending push notifications only to users with FCM tokens
-    const usersWithTokens = await User.find({ _id: { $in: ids }, deviceToken: { $exists: true, $ne: null } });
+    // Step 2: Send push notifications to users with FCM tokens
+    const usersWithTokens = await User.find({
+      _id: { $in: ids },
+      deviceToken: { $exists: true, $ne: null },
+    });
 
     for (const user of usersWithTokens) {
-      const notification = savedNotifications.find((n) => n.userId.toString() === user._id.toString());
+      const notification = savedNotifications.find((n) =>
+        n.userId.toString() === user._id.toString()
+      );
 
       const fcmMessage = {
         token: user.deviceToken,
@@ -37,11 +42,10 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
       };
 
       try {
-        console.log(admin.messaging().getToken());
         const response = await admin.messaging().send(fcmMessage);
-        console.log(response)
+        console.log(`Push sent to ${user._id}:`, response);
       } catch (err) {
-        console.error(`FCM error for ${user._id}:`, err);
+        console.error(`FCM error for ${user._id}:`, err.message);
       }
     }
   } catch (err) {

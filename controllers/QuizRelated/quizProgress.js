@@ -87,6 +87,9 @@ exports.submitQuizAnswers = async (req, res) => {
       `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`,
       "promotional"
     );
+    await User.findByIdAndUpdate(userId, {
+      $inc: { quizPoints: score },
+    });
 
     res.status(200).json({
       success: true,
@@ -94,18 +97,16 @@ exports.submitQuizAnswers = async (req, res) => {
       score,
       totalQuestions,
       correctAnswers: score,
-      pointsEarned:score,
+      pointsEarned: score,
       wrongAnswers: totalQuestions - score,
       percentage: `${percentage}%`,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error submitting quiz",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error submitting quiz",
+      error: error.message,
+    });
   }
 };
 // Get a user's quiz progress
@@ -122,7 +123,7 @@ exports.getUserAttempts = async (req, res) => {
       .status(500)
       .json({ success: false, message: "Error fetching progress", error });
   }
-};// controllers/quizController.js
+}; // controllers/quizController.js
 
 exports.claimQuizReward = async (req, res) => {
   try {
@@ -131,16 +132,19 @@ exports.claimQuizReward = async (req, res) => {
     const { quizId } = req.body;
 
     if (!quizId) {
-      return res.status(400).json({ success: false, message: "Quiz ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Quiz ID is required" });
     }
 
     const attempt = await QuizAttempt.findOne({ userId, quizId });
 
     if (!attempt) {
-      return res.status(404).json({ success: false, message: "Quiz attempt not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz attempt not found" });
     }
-// ****************************** to be uncommented when everything is tested*************************
-
+    // ****************************** to be uncommented when everything is tested*************************
 
     // if (attempt.rewardClaimed) {
     //   return res.status(400).json({ success: false, message: "Reward already claimed" });
@@ -169,8 +173,6 @@ exports.claimQuizReward = async (req, res) => {
     });
   }
 };
-
-
 
 exports.getLeaderboard = async (req, res) => {
   try {
