@@ -105,7 +105,7 @@ exports.getPendingRewardClaims = async (req, res) => {
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
-    const { amount } = req.body; // amount to send as crypto
+    const { amount } = req.body;
 
     if (!amount) {
       return res.status(400).json({ success: false, message: "Amount is required" });
@@ -121,17 +121,14 @@ exports.approveClaim = async (req, res) => {
       return res.status(404).json({ success: false, message: "User or wallet address not found" });
     }
 
-    // 🪙 Send coins
     const tx = await sendTransaction(user.wallet_address, amount);
     const receipt = await tx.wait();
 
-    // 🔍 Calculate fees
     const provider = await getProvider();
     const gasPrice = await provider.getGasPrice();
     const gasUsed = receipt.gasUsed;
     const totalFee = gasPrice.mul(gasUsed);
 
-    // 💾 Save the transaction
     await saveTransactionReceipt({
       from: tx.from,
       to: user.wallet_address,
@@ -145,14 +142,11 @@ exports.approveClaim = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // 🎯 Update user points
     await User.findByIdAndUpdate(user._id, { $inc: { quizPoints: claim.score } });
 
-    // ✅ Mark claim as approved
     claim.status = "Approved";
     await claim.save();
 
-    // 📝 Update quiz attempt
     await QuizAttempt.findOneAndUpdate(
       { userId: user._id, quizId: claim.quizId },
       { rewardClaimed: true }

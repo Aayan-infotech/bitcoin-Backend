@@ -139,7 +139,7 @@ exports.claimQuizReward = async (req, res) => {
 
     const attempt = await QuizAttempt.findOne({ userId, quizId });
 
-    if (!attempt) {
+      if (!attempt) {
       return res
         .status(404)
         .json({ success: false, message: "Quiz attempt not found" });
