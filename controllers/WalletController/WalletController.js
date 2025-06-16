@@ -116,6 +116,8 @@ exports.getPendingRewardClaims = async (req, res) => {
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
+
+    
     // const { amount } = req.body;
     const amount = "0.00001";
     if (!amount) {

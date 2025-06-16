@@ -14,9 +14,15 @@ const UserSchema = new Schema(
       type: String,
       enum: ["Male", "Female", "Other"],
     },
-    biometricAuth: {
-      type: Boolean,
-      default: false,
+    biometric: {
+      biometricKey: {
+        type: String,
+        default: null,
+      },
+      biometricStatus: {
+        type: Boolean,
+        default: false,
+      },
     },
     accountType: {
       type: String,

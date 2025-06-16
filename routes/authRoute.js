@@ -1,5 +1,5 @@
 const express = require('express');
-const {  userSignup,login, verifyOtp, resetPassword, forgotPassword,updatePassword,saveDeviceToken, updateBiometric } = require('../controllers/authController');
+const {  userSignup,login, verifyOtp, resetPassword, forgotPassword,updatePassword,saveDeviceToken, updateBiometric, loginWithBiometric } = require('../controllers/authController');
 const { uploadToS3 } = require('../config/s3Setup');
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
@@ -21,6 +21,7 @@ router.post("/reset-password", resetPassword);
 router.post("/update-password", updatePassword);
 router.put("/save-device-token", saveDeviceToken);
 router.put("/update-biometric",auth, updateBiometric);
+router.post("/biometric-login", loginWithBiometric);
 
 
 module.exports = router;    

@@ -13,16 +13,16 @@ const userSignup = async (req, res, next) => {
   try {
     const { name, email, password, mobileNumber, gender, accountType } =
       req.body;
- 
+
     if (!name || !email || !password || !mobileNumber || !gender) {
       return res
         .status(400)
         .json({ message: "Please fill all the required fields" });
     }
- 
+
     let user = await User.findOne({ email }).select("+password");
     const otp = "1111";
- 
+
     const emailTemplate = (otp) => `
       <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
         <h2 style="color: #007bff;">Email Verification OTP</h2>
@@ -33,14 +33,14 @@ const userSignup = async (req, res, next) => {
         <p style="font-size: 12px; color: #777;">If you did not request this, please ignore this email.</p>
       </div>
     `;
- 
+
     if (user) {
       if (!user.isEmailVerified) {
         user.emailVerificationOtp = otp;
         user.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
         await sendEmail(email, "Verify Your Email", emailTemplate(otp));
- 
+
         return res.status(200).json({
           success: true,
           message:
@@ -49,12 +49,12 @@ const userSignup = async (req, res, next) => {
       }
       return res.status(400).json({ message: "Email is already in use" });
     }
- 
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const wallet = createWallet();
     // const encryptedKey = encrypt(wallet.privateKey);
     const encryptedKey = wallet.privateKey;
- 
+
     const newUser = new User({
       name,
       email,
@@ -68,10 +68,10 @@ const userSignup = async (req, res, next) => {
       emailVerificationOtp: otp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000,
     });
- 
+
     await newUser.save();
     await sendEmail(email, "Verify Your Email", emailTemplate(otp));
- 
+
     return res.status(201).json({
       success: true,
       message: "User signup successful. Verification email sent.",
@@ -102,12 +102,10 @@ const verifyOtp = async (req, res) => {
       !user.emailVerificationExpires ||
       user.emailVerificationExpires < Date.now()
     ) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "OTP expired. Please request a new one.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please request a new one.",
+      });
     }
 
     if (otp !== user.emailVerificationOtp) {
@@ -173,21 +171,47 @@ const login = async (req, res) => {
       maxAge: 3 * 60 * 1000,
     });
 
+    const {
+  _id,
+  name,
+  mobileNumber,
+  gender,
+  accountType,
+  image,
+  isEmailVerified,
+  notificationPreferences,
+  biometric
+} = user;
+
+const safeUser = {
+  _id,
+  name,
+  email,
+  mobileNumber,
+  gender,
+  accountType,
+  image,
+  isEmailVerified,
+  notificationPreferences,
+  biometric: {
+    biometricStatus: biometric?.biometricStatus || false,
+  },
+};
+
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
-      user,
+      user:safeUser,
     });
   } catch (error) {
     console.error("Login Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -197,12 +221,10 @@ const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "User with this email is not registered with us.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "User with this email is not registered with us.",
+      });
     }
 
     // const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -226,19 +248,15 @@ const forgotPassword = async (req, res) => {
 
     await sendEmail(email, "Password Reset OTP", message);
 
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "Password reset OTP sent to your registered email.",
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Password reset OTP sent to your registered email.",
+    });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Something went wrong. Please try again later.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    });
   }
 };
 
@@ -300,12 +318,10 @@ const updatePassword = async (req, res) => {
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Your old password does not match the existing password",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Your old password does not match the existing password",
+      });
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
@@ -342,42 +358,132 @@ const saveDeviceToken = async (req, res) => {
 
 const updateBiometric = async (req, res) => {
   try {
-    const { password } = req.body;
+    const { biometricKey } = req.body;
 
-    if (!password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Password is required" });
-    }
-
-    const user = await User.findById(req.user.id).select("+password");
+    const user = await User.findById(req.user.id);
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    const passwordVerified = await bcrypt.compare(password, user.password);
-    if (!passwordVerified) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid password" });
+    if (user.biometric.biometricStatus) {
+      // Currently enabled → disable
+      user.biometric.biometricKey = null;
+      user.biometric.biometricStatus = false;
+    } else {
+      if (!biometricKey) {
+        return res.status(400).json({
+          success: false,
+          message: "Biometric key is required to enable biometric",
+        });
+      }
+      user.biometric.biometricKey = biometricKey;
+      user.biometric.biometricStatus = true;
     }
 
-    user.biometricAuth = !user.biometricAuth;
     await user.save();
 
     return res.status(200).json({
       success: true,
       message: `Biometric authentication ${
-        user.biometricAuth ? "Enabled" : "Disabled"
-      }`,
+        user.biometric.biometricStatus ? "enabled" : "disabled"
+      } successfully`,
+      biometric: user.biometric,
     });
   } catch (err) {
     console.error("Error updating biometric:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const loginWithBiometric = async (req, res) => {
+  try {
+    const { biometricKey } = req.body;
+
+    if (!biometricKey) {
+      return res.status(400).json({
+        success: false,
+        message: "Biometric key is required",
+      });
+    }
+
+    const secrets = await getSecrets();
+
+    const user = await User.findOne({
+      "biometric.biometricKey": biometricKey,
+      "biometric.biometricStatus": true,
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid biometric key",
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "Email not verified",
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      secrets.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 3 * 60 * 1000, // Same as your password login
+    });
+    const {
+      _id,
+      name,
+      email,
+      mobileNumber,
+      gender,
+      accountType,
+      image,
+      isEmailVerified,
+      notificationPreferences,
+      biometric,
+    } = user;
+
+    const safeUser = {
+      _id,
+      name,
+      email,
+      mobileNumber,
+      gender,
+      accountType,
+      image,
+      isEmailVerified,
+      notificationPreferences,
+      biometric: {
+        biometricStatus: biometric?.biometricStatus || false,
+      },
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Biometric login successful",
+      token,
+      user: safeUser,
+    });
+  } catch (error) {
+    console.error("Biometric Login Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -390,4 +496,5 @@ module.exports = {
   resetPassword,
   updatePassword,
   updateBiometric,
+  loginWithBiometric,
 };
