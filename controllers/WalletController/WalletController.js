@@ -11,6 +11,7 @@ const {
 } = require("../../service/etheriumService");
 const { saveTransactionReceipt } = require("../../utils/fileStorage");
 const { ethers } = require("ethers");
+const { sendNotification } = require("../../config/pushNotification");
 
 exports.sendCoins = async (req, res) => {
   try {
@@ -50,6 +51,11 @@ exports.sendCoins = async (req, res) => {
       status: receipt.status === 1 ? "Success" : "Failed",
       timestamp: new Date().toISOString(),
     });
+    sendNotification(
+      userId,
+      `${amount} has been credited into your wallet`,
+      "wallet"
+    );
 
     res.status(200).json({
       message: "Transaction successful",
@@ -104,20 +110,17 @@ exports.getPendingRewardClaims = async (req, res) => {
     );
     res.status(200).json({ success: true, claims });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch claims",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch claims",
+      error: error.message,
+    });
   }
 };
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
 
-    
     // const { amount } = req.body;
     const amount = "0.00001";
     if (!amount) {
@@ -128,12 +131,10 @@ exports.approveClaim = async (req, res) => {
 
     const claim = await RewardClaimRequest.findById(claimId);
     if (!claim || claim.status !== "Pending") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid or already processed claim",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or already processed claim",
+      });
     }
 
     const user = await User.findById(claim.user);
@@ -175,6 +176,11 @@ exports.approveClaim = async (req, res) => {
       { userId: user._id, quizId: claim.quizId },
       { rewardClaimed: true }
     );
+    sendNotification(
+      user._id,
+      `Your request for reward claim has been approved by the admin, coins are available into your wallet`,
+      "wallet"
+    );
 
     res.status(200).json({
       success: true,
@@ -206,6 +212,7 @@ exports.sendCoinsUsers = async (req, res) => {
 
     // Get sender and receiver
     const userFrom = await User.findById(userIdFrom);
+    const userto = await User.find({ wallet_address: userIdTo });
     // const userFrom = await User.find({ wallet_address : userIdFrom });
     // const userTo = await User.find({ wallet_address : userIdTo });
     // const userTo = await User.findById(userIdTo);
@@ -281,6 +288,16 @@ exports.sendCoinsUsers = async (req, res) => {
       amountInUsd: amountInUsd,
       timestamp: new Date().toISOString(),
     });
+    await sendNotification(
+      userto._id,
+      `${userIdTo} has sent you ${amount} coins`,
+      "wallet"
+    );
+    await sendNotification(
+      userIdFrom,
+      `You sent ${amount} coins to ${userIdTo} `,
+      "transaction"
+    );
 
     // Success response
     res.status(200).json({

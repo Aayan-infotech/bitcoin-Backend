@@ -127,7 +127,7 @@ const requestMPINReset = async (req, res) => {
     }
 
     // const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    const otp = '111111' // 6-digit OTP
+    const otp = "111111"; // 6-digit OTP
     const otpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.mpinResetOtp = otp;
@@ -151,13 +151,15 @@ const requestMPINReset = async (req, res) => {
 const resetMPINWithOtp = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const {  otp, newMpin } = req.body;
+    const { otp, newMpin } = req.body;
 
     if (!/^\d{4}$/.test(newMpin)) {
       return res.status(400).json({ message: "MPIN must be exactly 4 digits" });
     }
 
-    const user = await User.findById(userId).select("+mpinResetOtp +mpinResetExpires +mpinHash");
+    const user = await User.findById(userId).select(
+      "+mpinResetOtp +mpinResetExpires +mpinHash"
+    );
 
     if (!user || user.mpinResetOtp !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
@@ -172,7 +174,9 @@ const resetMPINWithOtp = async (req, res) => {
     user.mpinResetExpires = undefined;
     await user.save();
 
-    return res.status(200).json({ success: true, message: "MPIN reset successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "MPIN reset successfully" });
   } catch (error) {
     console.error("Error resetting MPIN:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -230,7 +234,7 @@ const getDashboardData = async (req, res) => {
 };
 const getUserTransactionHistory = async (req, res) => {
   try {
-    const userId = req.user.id; // You mentioned this is how you're getting the user ID
+    const userId = req.user.id;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -249,13 +253,17 @@ const getUserTransactionHistory = async (req, res) => {
     }
 
     const transactions = await Transaction.find({
-      from: walletAddress,
+      $or: [{ from: walletAddress }, { to: walletAddress }],
     }).sort({ timestamp: -1 });
+    const formatted = transactions.map((tx) => ({
+      ...tx._doc,
+      type: tx.from === walletAddress ? "Sent" : "Received",
+    }));
 
     res.status(200).json({
       success: true,
       count: transactions.length,
-      data: transactions,
+      data: formatted,
     });
   } catch (error) {
     console.error("Error fetching transactions:", error);
