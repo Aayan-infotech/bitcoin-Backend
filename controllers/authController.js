@@ -134,6 +134,21 @@ const verifyOtp = async (req, res) => {
       .json({ success: false, error, message: "Internal server error" });
   }
 };
+const sendLoginAlertEmail = async (email, ip, userAgent) => {
+  const subject = "New Login Detected on Your Account";
+  const html = `
+    <p>Hello,</p>
+    <p>We detected a new login to your account:</p>
+    <ul>
+      <li><strong>IP Address:</strong> ${ip}</li>
+      <li><strong>Device:</strong> ${userAgent}</li>
+      <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
+    </ul>
+    <p>If this wasn't you, please reset your password immediately.</p>
+  `;
+
+  await sendEmail(email, subject, html);
+};
 
 const login = async (req, res) => {
   try {
@@ -142,23 +157,42 @@ const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     if (!user.isEmailVerified) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Email not verified" });
+      return res.status(401).json({
+        success: false,
+        message: "Email not verified",
+      });
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
+
+    // Detect IP and device
+    const currentIP = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    const currentUserAgent = req.get("User-Agent");
+
+    const isNewLogin =
+      user.lastLoginIP !== currentIP || user.lastUserAgent !== currentUserAgent;
+
+    if (isNewLogin && user.notificationPreferences?.security) {
+      await sendLoginAlertEmail(user.email, currentIP, currentUserAgent);
+    }
+
+    // Save new metadata
+    user.lastLoginIP = currentIP;
+    user.lastUserAgent = currentUserAgent;
+    await user.save();
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
@@ -168,42 +202,41 @@ const login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      maxAge: 3 * 60 * 1000,
+      maxAge: 3 * 60 * 1000, // 3 minutes
     });
 
     const {
-  _id,
-  name,
-  mobileNumber,
-  gender,
-  accountType,
-  image,
-  isEmailVerified,
-  notificationPreferences,
-  biometric
-} = user;
+      _id,
+      name,
+      mobileNumber,
+      gender,
+      accountType,
+      image,
+      isEmailVerified,
+      notificationPreferences,
+      biometric,
+    } = user;
 
-const safeUser = {
-  _id,
-  name,
-  email,
-  mobileNumber,
-  gender,
-  accountType,
-  image,
-  isEmailVerified,
-  notificationPreferences,
-  biometric: {
-    biometricStatus: biometric?.biometricStatus || false,
-  },
-};
-
+    const safeUser = {
+      _id,
+      name,
+      email,
+      mobileNumber,
+      gender,
+      accountType,
+      image,
+      isEmailVerified,
+      notificationPreferences,
+      biometric: {
+        biometricStatus: biometric?.biometricStatus || false,
+      },
+    };
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
-      user:safeUser,
+      user: safeUser,
     });
   } catch (error) {
     console.error("Login Error:", error);

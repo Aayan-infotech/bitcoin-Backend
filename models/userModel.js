@@ -58,6 +58,8 @@ const UserSchema = new Schema(
     deviceToken: { type: String },
     resetPasswordOtp: { type: String },
     resetPasswordExpires: { type: Date },
+    lastLoginIP: { type: String },
+    lastUserAgent: { type: String },
     notificationPreferences: {
       promotional: { type: Boolean, default: true },
       wallet: { type: Boolean, default: true },
