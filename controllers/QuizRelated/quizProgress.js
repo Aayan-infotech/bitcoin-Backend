@@ -139,7 +139,7 @@ exports.claimQuizReward = async (req, res) => {
 
     const attempt = await QuizAttempt.findOne({ userId, quizId });
 
-      if (!attempt) {
+    if (!attempt) {
       return res
         .status(404)
         .json({ success: false, message: "Quiz attempt not found" });
@@ -176,15 +176,71 @@ exports.claimQuizReward = async (req, res) => {
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const leaderboard = await QuizAttempt.find()
-      .populate("userId", "name")
-      .sort({ percentage: -1 })
-      .limit(10);
+    const leaderboard = await QuizAttempt.aggregate([
+      {
+        $match: {
+          userId: { $ne: null }, // Exclude attempts without userId
+        },
+      },
+      {
+        $group: {
+          _id: "$userId",
+          totalScore: { $sum: "$score" },
+          totalQuestions: { $sum: "$totalQuestions" },
+          attemptCount: { $sum: 1 },
+        },
+      },
+      {
+        $addFields: {
+          percentage: {
+            $cond: [
+              { $eq: ["$totalQuestions", 0] },
+              0,
+              { $multiply: [{ $divide: ["$totalScore", "$totalQuestions"] }, 100] }
+            ],
+          },
+        },
+      },
+      {
+        $sort: { percentage: -1 } // Highest overall percentage at top
+      },
+      {
+        $limit: 10
+      },
+      {
+        $lookup: {
+          from: "users", // your users collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: "$user._id",
+          name: "$user.name",
+          image: "$user.image",
+          totalScore: 1,
+          totalQuestions: 1,
+          percentage: { $round: ["$percentage", 2] },
+          attemptCount: 1
+        }
+      }
+    ]);
 
     res.status(200).json({ success: true, leaderboard });
+
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error fetching leaderboard", error });
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching leaderboard",
+      error
+    });
   }
 };
+

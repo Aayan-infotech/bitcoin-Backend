@@ -1,6 +1,6 @@
 const Notification = require("../models/Notification");
 const User = require("../models/userModel");
-const admin = require("./firebse"); // Firebase Admin SDK setup
+const admin = require("./firebase"); // Firebase Admin SDK setup
 
 const sendNotification = async (userIds, message, type = "promotional", sentBy, broadcastId = null) => {
   try {
