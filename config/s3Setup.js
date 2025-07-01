@@ -24,7 +24,7 @@ const getAwsCredentials = async () => {
 
   const secret = JSON.parse(data.SecretString);
 
-  return {
+    return {
     accessKeyId: secret.AWS_ACCESS_KEY_ID,
     secretAccessKey: secret.AWS_SECRET_ACCESS_KEY,
     bucketName: secret.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME, // fallback to env

@@ -6,16 +6,31 @@ const sendEmail = require("../config/sendMail"); // Your existing email logic
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ accountType: { $ne: "Admin" } });
+    let { page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const skip = (page - 1) * limit;
+
+    const users = await User.find({ accountType: { $ne: "Admin" } })
+      .skip(skip)
+      .limit(limit);
+
+    const totalUsers = await User.countDocuments({ accountType: { $ne: "Admin" } });
+
     return res.status(200).json({
       success: true,
-      message: "Users fetched Successfully",
+      message: "Users fetched successfully",
+      page,
+      totalPages: Math.ceil(totalUsers / limit),
+      totalUsers,
       users,
     });
   } catch (error) {
-    return res.status(401).json({
+    return res.status(500).json({
       success: false,
-      message: "Error Occured while fetching all the users",
+      message: "Error occurred while fetching users",
     });
   }
 };

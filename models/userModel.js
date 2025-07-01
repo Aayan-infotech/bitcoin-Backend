@@ -43,7 +43,7 @@ const UserSchema = new Schema(
     level: { type: String },
     quizPoints: { type: Number, default: 0 },
     cryptoBalance: { type: String },
-    mpinHash: { type: String }, // ✅ New field
+    mpinHash: { type: String },
     mpinResetOtp: { type: String, select: false },
     mpinResetExpires: { type: Date },
     linkedCards: [{ type: mongoose.Schema.Types.ObjectId, ref: "Card" }],
@@ -65,6 +65,25 @@ const UserSchema = new Schema(
       wallet: { type: Boolean, default: true },
       transaction: { type: Boolean, default: true },
       security: { type: Boolean, default: true },
+    },
+
+    businessInfo: {
+      businessName: { type: String },
+      businessTaxId: { type: String },
+      businessCountry: { type: String },
+      businessAddress: { type: String },
+      city: { type: String },
+      province: { type: String },
+      postalCode: { type: String },
+      addressDocument: { type: String },
+    },
+
+    beneficialOwner: {
+      fullName: { type: String },
+      dob: { type: Date },
+      address: { type: String },
+      ownershipPercentage: { type: String },
+      governmentID: { type: String },
     },
   },
   { timestamps: true }
