@@ -11,15 +11,64 @@ const { getSecrets } = require("../config/awsSecrets");
 
 const userSignup = async (req, res, next) => {
   try {
-    const { name, email, password, mobileNumber, gender, accountType } =
-      req.body;
+    const {
+      name,
+      email,
+      password,
+      mobileNumber,
+      gender,
+      accountType = "Personal",
 
+      businessName,
+      businessTaxId,
+      businessCountry,
+      businessAddress,
+      city,
+      province,
+      postalCode,
+
+      ownerFullName,
+      ownerDOB,
+      ownerAddress,
+      ownershipPercentage,
+      governmentID
+    } = req.body;
+     if (!req.fileLocations[0]) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Image not found" });
+    }
+
+    // Basic validation for all users
     if (!name || !email || !password || !mobileNumber || !gender) {
       return res
         .status(400)
         .json({ message: "Please fill all the required fields" });
     }
 
+    // Extra validation for Business accounts
+    if (accountType === "Business") {
+      if (
+        !businessName ||
+        !businessTaxId ||
+        !businessCountry ||
+        !businessAddress ||
+        !city ||
+        !province ||
+        !postalCode ||
+        !ownerFullName ||
+        !ownerDOB ||
+        !ownerAddress ||
+        !ownershipPercentage ||
+        !governmentID
+      ) {
+        return res.status(400).json({
+          message: "Please fill all business and beneficial owner fields",
+        });
+      }
+    }
+
+    // Check for existing user
     let user = await User.findOne({ email }).select("+password");
     const otp = "1111";
 
@@ -34,6 +83,7 @@ const userSignup = async (req, res, next) => {
       </div>
     `;
 
+    // If user exists but not verified
     if (user) {
       if (!user.isEmailVerified) {
         user.emailVerificationOtp = otp;
@@ -50,10 +100,10 @@ const userSignup = async (req, res, next) => {
       return res.status(400).json({ message: "Email is already in use" });
     }
 
+    // New user creation
     const hashedPassword = await bcrypt.hash(password, 10);
     const wallet = createWallet();
-    // const encryptedKey = encrypt(wallet.privateKey);
-    const encryptedKey = wallet.privateKey;
+    const encryptedKey = wallet.privateKey; // You can encrypt it if needed
 
     const newUser = new User({
       name,
@@ -61,12 +111,31 @@ const userSignup = async (req, res, next) => {
       password: hashedPassword,
       mobileNumber,
       gender,
-      accountType: accountType || "Personal",
+      accountType,
       wallet_address: wallet.address,
-      // private_key_encrypted: JSON.stringify(encryptedKey),
       private_key_encrypted: encryptedKey,
       emailVerificationOtp: otp,
       emailVerificationExpires: Date.now() + 10 * 60 * 1000,
+
+      // Business and owner fields only if Business account
+      ...(accountType === "Business" && {
+        businessInfo: {
+          businessName,
+          businessTaxId,
+          businessCountry,
+          businessAddress,
+          city,
+          province,
+          postalCode,addressDocument:req.fileLocations[0]
+        },
+        beneficialOwner: {
+          fullName: ownerFullName,
+          dob: ownerDOB,
+          address: ownerAddress,
+          ownershipPercentage,
+          governmentID,
+        },
+      }),
     });
 
     await newUser.save();
@@ -81,7 +150,7 @@ const userSignup = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       error: error.message,
-      message: "Something went wrong",
+      message: "Something went wrong during signup",
     });
   }
 };
