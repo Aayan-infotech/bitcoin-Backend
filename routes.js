@@ -23,6 +23,6 @@ router.use("/user",userRoutes);
 router.use("/card",cardRoutes);
 router.use("/device-token",deviceRoutes);
 router.use("/payment",paymentRoutes);
-router.use("/abc-details",auth,albhabetDetails);
+router.use("/abc-details",albhabetDetails);
 
 module.exports = router;
