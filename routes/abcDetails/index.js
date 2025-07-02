@@ -1,14 +1,10 @@
 const express = require("express");
+const cRoutes=require("./alphabets/C.routes")
 
 const router = express.Router();
 
-router.get('/alphabets', (req,res)=>{
-    console.log("into the abcs")
-    return res.status(200).json({
-        success:true,
-        message:"working fine!!"
-    })
-});
+router.use('/c',cRoutes )
+
 
 
 module.exports = router;
