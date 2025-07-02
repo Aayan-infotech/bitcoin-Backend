@@ -11,6 +11,7 @@ const cardRoutes = require("./routes/PaymentRelated/CardsRoutes");
 const deviceRoutes = require("./routes/deviceTokenRoutes");
 const paymentRoutes = require("./routes/PaymentRelated/paymentRoutes");
 const albhabetDetails = require("./routes/abcDetails/index");
+const { auth } = require("./middlewares/authMiddleware");
 
 router.use("/auth", authRoutes);
 router.use("/alphabet", alphabet);
@@ -22,6 +23,6 @@ router.use("/user",userRoutes);
 router.use("/card",cardRoutes);
 router.use("/device-token",deviceRoutes);
 router.use("/payment",paymentRoutes);
-router.use("/abc",albhabetDetails);
+router.use("/abc-details",auth,albhabetDetails);
 
 module.exports = router;
