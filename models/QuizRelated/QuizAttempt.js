@@ -2,22 +2,22 @@ const mongoose = require("mongoose");
 
 const QuizAttemptSchema = new mongoose.Schema(
   {
-    quizId: {
+    quiz: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Quiz",
       required: true,
     },
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
     score: { type: Number, required: true },
     totalQuestions: { type: Number, required: true },
-    percentage: { type: Number, required: true }, // Store score as a percentage
+    percentage: { type: Number, required: true },
     rewardClaimed: { type: Boolean, default: false },
   },
-  { timestamps: true } // Automatically adds createdAt & updatedAt
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("QuizAttempt", QuizAttemptSchema);

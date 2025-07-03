@@ -2,17 +2,15 @@ const Quiz = require("../../models/QuizRelated/QuizModel");
 const Question = require("../../models/QuizRelated/QuestionsModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
-const Course = require("../../models/CourseRelated/CourseModel");
 const { sendNotification } = require("../../config/pushNotification");
 
-// Create a new Quiz
+// ✅ Create a new Quiz
 exports.createQuiz = async (req, res) => {
   try {
-    const { title, description, timeLimit } = req.body;
-    if (!req.fileLocations[0]) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Image not found" });
+    const { title, description, timeLimit, level } = req.body;
+
+    if (!req.fileLocations || !req.fileLocations[0]) {
+      return res.status(400).json({ success: false, message: "Image not found" });
     }
 
     const newQuiz = new Quiz({
@@ -20,15 +18,18 @@ exports.createQuiz = async (req, res) => {
       description,
       image: req.fileLocations[0],
       timeLimit,
+      level,
       questions: [],
     });
+
     await newQuiz.save();
-    const allUsers = await User.find({}, "_id"); // Fetch all users
+
+    // Notify all users
+    const allUsers = await User.find({}, "_id");
     allUsers.forEach((user) =>
-      sendNotification
-    (
+      sendNotification(
         user._id,
-        `A new Quiz ${title} has been added.`,
+        `A new Quiz "${title}" (Level ${level}) has been added.`,
         "promotional"
       )
     );
@@ -47,14 +48,14 @@ exports.createQuiz = async (req, res) => {
   }
 };
 
-// Get all quizzes
+// ✅ Get all quizzes
 exports.getAllQuizzes = async (req, res) => {
   try {
     const quizzes = await Quiz.find().select("-questions");
     res.status(200).json({
       success: true,
       quizzes,
-      message: "Quizzes Fetched Successfully",
+      message: "Quizzes fetched successfully",
     });
   } catch (error) {
     res.status(500).json({
@@ -65,15 +66,15 @@ exports.getAllQuizzes = async (req, res) => {
   }
 };
 
-// Get a specific quiz by ID
+// ✅ Get quiz by ID with questions
 exports.getQuizById = async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id).populate("questions");
+
     if (!quiz) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Quiz not found" });
+      return res.status(404).json({ success: false, message: "Quiz not found" });
     }
+
     res.status(200).json({ success: true, quiz });
   } catch (error) {
     res.status(500).json({
@@ -83,6 +84,8 @@ exports.getQuizById = async (req, res) => {
     });
   }
 };
+
+// ✅ Delete quiz by ID with questions
 exports.deleteQuizById = async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
@@ -91,15 +94,12 @@ exports.deleteQuizById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
 
-    // Delete all related questions first
     await Question.deleteMany({ _id: { $in: quiz.questions } });
-
-    // Then delete the quiz
     await Quiz.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
-      message: "Quiz and its questions deleted successfully"
+      message: "Quiz and its questions deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
@@ -110,4 +110,53 @@ exports.deleteQuizById = async (req, res) => {
   }
 };
 
-// submit all the answers
+// ✅ Submit quiz & handle level-up logic
+exports.submitQuiz = async (req, res) => {
+  try {
+    const { quizId, score } = req.body;
+    const userId = req.user._id;
+
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    // Save or update quiz attempt
+    let attempt = await QuizAttempt.findOne({ user: userId, quiz: quizId });
+    if (!attempt) {
+      attempt = new QuizAttempt({ user: userId, quiz: quizId, score });
+    } else {
+      attempt.score = score;
+    }
+    await attempt.save();
+
+    // Check if user qualifies to level up
+    const user = await User.findById(userId);
+    const levelQuizzes = await Quiz.find({ level: user.level });
+
+    const allPassed = await Promise.all(levelQuizzes.map(async (q) => {
+      const a = await QuizAttempt.findOne({ user: userId, quiz: q._id });
+      return a && a.score >= 70; // or your custom pass threshold
+    }));
+
+    let leveledUp = false;
+    if (allPassed.every(Boolean)) {
+      user.level += 1;
+      await user.save();
+      leveledUp = true;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Quiz submitted successfully",
+      newLevel: user.level,
+      leveledUp,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error submitting quiz",
+      error: error.message,
+    });
+  }
+};

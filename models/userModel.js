@@ -26,7 +26,7 @@ const UserSchema = new Schema(
     },
     accountType: {
       type: String,
-      enum: ["Personal", "Business", "Other", "Admin"],
+      enum: ["Personal", "Business", "Admin"],
       default: "Personal",
     },
     image: { type: String, default: null },

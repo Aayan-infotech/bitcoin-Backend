@@ -1,26 +1,18 @@
-const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const Quiz = require("../../models/QuizRelated/QuizModel");
+const Question = require("../../models/QuizRelated/QuestionsModel");
+const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
 
-// Start a quiz attempt
+// 📌 Start a quiz
 exports.startQuiz = async (req, res) => {
   try {
-    const { userId, quizId } = req.body;
+    const { user, quiz } = req.body;
 
-    // Check if the user has already attempted the quiz
-    // const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
-    // if (existingAttempt) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "Quiz already attempted" });
-    // }
-
-    // Initialize a new quiz attempt
     const newAttempt = new QuizAttempt({
-      userId,
-      quizId,
+      user,
+      quiz,
       score: 0,
       totalQuestions: 0,
       percentage: 0,
@@ -28,68 +20,56 @@ exports.startQuiz = async (req, res) => {
 
     await newAttempt.save();
 
-    res
-      .status(201)
-      .json({ success: true, message: "Quiz started", attempt: newAttempt });
+    res.status(201).json({ success: true, message: "Quiz started", attempt: newAttempt });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error starting quiz", error });
+    res.status(500).json({ success: false, message: "Error starting quiz", error });
   }
 };
+
+// 📌 Submit quiz answers
 exports.submitQuizAnswers = async (req, res) => {
   try {
-    const { quizId, userId, answers } = req.body;
-    const existingAttempt = await QuizAttempt.findOne({ userId, quizId });
-    // if (existingAttempt) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "Quiz already attempted" });
-    // }
+    const { quiz, user, answers } = req.body;
 
-    if (!quizId || !userId || !answers || !Array.isArray(answers)) {
+    if (!quiz || !user || !answers || !Array.isArray(answers)) {
       return res.status(400).json({ success: false, message: "Invalid input" });
     }
 
-    const quiz = await Quiz.findById(quizId).populate("questions");
-    if (!quiz) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Quiz not found" });
+    const existingAttempt = await QuizAttempt.findOne({ user, quiz });
+    const fullQuiz = await Quiz.findById(quiz).populate("questions");
+
+    if (!fullQuiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
     }
 
-    const totalQuestions = Math.max(quiz.questions.length, 1);
+    const totalQuestions = Math.max(fullQuiz.questions.length, 1);
     const correctAnswersMap = new Map(
-      quiz.questions.map((q) => [q._id.toString(), q.correctAnswer])
+      fullQuiz.questions.map((q) => [q._id.toString(), q.correctAnswer])
     );
 
-    // Calculate score
     const score = answers.reduce((acc, { questionId, selectedOption }) => {
-      return correctAnswersMap.get(questionId) === selectedOption
-        ? acc + 1
-        : acc;
+      return correctAnswersMap.get(questionId) === selectedOption ? acc + 1 : acc;
     }, 0);
 
     const percentage = ((score / totalQuestions) * 100).toFixed(2);
 
-    // Store the user's attempt
     const quizAttempt = new QuizAttempt({
-      quizId,
-      userId,
+      quiz,
+      user,
       score,
       totalQuestions,
-      percentage, // Store percentage in DB
+      percentage,
     });
 
     await quizAttempt.save();
+
     sendNotification(
-      userId,
-      `You Scored ${percentage}%, while attempting the quiz: ${quiz.title}.`,
+      user,
+      `You scored ${percentage}% on the quiz: ${fullQuiz.title}`,
       "promotional"
     );
-    await User.findByIdAndUpdate(userId, {
-      $inc: { quizPoints: score },
-    });
+
+    await User.findByIdAndUpdate(user, { $inc: { quizPoints: score } });
 
     res.status(200).json({
       success: true,
@@ -97,67 +77,59 @@ exports.submitQuizAnswers = async (req, res) => {
       score,
       totalQuestions,
       correctAnswers: score,
-      pointsEarned: score,
       wrongAnswers: totalQuestions - score,
+      pointsEarned: score,
       percentage: `${percentage}%`,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error submitting quiz",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error submitting quiz", error: error.message });
   }
 };
-// Get a user's quiz progress
+
+// 📌 Get a user's quiz progress
 exports.getUserAttempts = async (req, res) => {
   try {
     const { userId } = req.params;
-    const progress = await QuizAttempt.find({ userId })
-      .populate("quizId")
+
+    const progress = await QuizAttempt.find({ user: userId })
+      .populate("quiz")
       .sort({ updatedAt: -1 });
 
     res.status(200).json({ success: true, progress });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error fetching progress", error });
+    res.status(500).json({ success: false, message: "Error fetching progress", error });
   }
-}; // controllers/quizController.js
+};
 
+// 📌 Claim quiz reward
 exports.claimQuizReward = async (req, res) => {
   try {
-    const userId = req.user.id;
-    // const userId = "67ab32f7f4a584223231f305";
-    const { quizId } = req.body;
+    const userId = req.user.id; // from auth middleware
+    const { quiz } = req.body;
 
-    if (!quizId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Quiz ID is required" });
+    if (!quiz) {
+      return res.status(400).json({ success: false, message: "Quiz ID is required" });
     }
 
-    const attempt = await QuizAttempt.findOne({ userId, quizId });
+    const attempt = await QuizAttempt.findOne({ user: userId, quiz });
 
     if (!attempt) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Quiz attempt not found" });
+      return res.status(404).json({ success: false, message: "Quiz attempt not found" });
     }
-    // ****************************** to be uncommented when everything is tested*************************
 
+    // You can uncomment this after testing
     // if (attempt.rewardClaimed) {
     //   return res.status(400).json({ success: false, message: "Reward already claimed" });
     // }
 
-    // const existingClaim = await RewardClaimRequest.findOne({ user: userId, quizId });
+    // const existingClaim = await RewardClaimRequest.findOne({ user: userId, quiz });
     // if (existingClaim) {
     //   return res.status(400).json({ success: false, message: "Reward claim already requested" });
     // }
 
     await RewardClaimRequest.create({
       user: userId,
-      quizId,
+      quiz,
       score: attempt.score,
     });
 
@@ -166,25 +138,22 @@ exports.claimQuizReward = async (req, res) => {
       message: "Reward claim submitted for admin approval.",
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to submit reward claim",
-      error: err.message,
-    });
+    res.status(500).json({ success: false, message: "Failed to submit reward claim", error: err.message });
   }
 };
 
+// 📌 Leaderboard
 exports.getLeaderboard = async (req, res) => {
   try {
     const leaderboard = await QuizAttempt.aggregate([
       {
         $match: {
-          userId: { $ne: null }, // Exclude attempts without userId
+          user: { $ne: null },
         },
       },
       {
         $group: {
-          _id: "$userId",
+          _id: "$user",
           totalScore: { $sum: "$score" },
           totalQuestions: { $sum: "$totalQuestions" },
           attemptCount: { $sum: 1 },
@@ -201,23 +170,17 @@ exports.getLeaderboard = async (req, res) => {
           },
         },
       },
-      {
-        $sort: { percentage: -1 } // Highest overall percentage at top
-      },
-      {
-        $limit: 10
-      },
+      { $sort: { percentage: -1 } },
+      { $limit: 10 },
       {
         $lookup: {
-          from: "users", // your users collection name
+          from: "users",
           localField: "_id",
           foreignField: "_id",
           as: "user"
         }
       },
-      {
-        $unwind: "$user"
-      },
+      { $unwind: "$user" },
       {
         $project: {
           _id: 0,
@@ -233,14 +196,7 @@ exports.getLeaderboard = async (req, res) => {
     ]);
 
     res.status(200).json({ success: true, leaderboard });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching leaderboard",
-      error
-    });
+    res.status(500).json({ success: false, message: "Error fetching leaderboard", error });
   }
 };
-
