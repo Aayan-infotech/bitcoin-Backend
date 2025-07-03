@@ -35,7 +35,7 @@ const userSignup = async (req, res, next) => {
     } = req.body;
 
     // Basic validation for all users
-    if (!name || !email || !password || !mobileNumber) {
+    if (!name || !email || !password) {
       return res
         .status(400)
         .json({ message: "Please fill all the required fields" });
