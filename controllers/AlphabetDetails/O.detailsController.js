@@ -1,14 +1,14 @@
-const EDetails = require("../../models/AlphabetDetails/E.detailsModel");
+const ODetails = require("../../models/AlphabetDetails/O.detailModel");
 
-const createEDetails = async (req, res) => {
+const createODetails = async (req, res) => {
   try {
     const { headline, subHeadLine } = req.body;
-    const images = req.fileLocations;
+    const video = req.fileLocations[0];
 
-    const newEntry = await EDetails.create({
+    const newEntry = await ODetails.create({
       headline,
       subHeadLine,
-      images,
+      video,
     });
 
     return res.status(201).json({
@@ -25,9 +25,9 @@ const createEDetails = async (req, res) => {
   }
 };
 
-const getAllEDetails = async (req, res) => {
+const getAllODetails = async (req, res) => {
   try {
-    const entries = await EDetails.find().sort({ createdAt: -1 });
+    const entries = await ODetails.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -43,6 +43,6 @@ const getAllEDetails = async (req, res) => {
   }
 };
 
-module.exports={getAllEDetails,createEDetails}
+module.exports={getAllODetails,createODetails}
 
 
