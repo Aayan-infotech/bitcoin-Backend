@@ -33,11 +33,6 @@ const userSignup = async (req, res, next) => {
       ownershipPercentage,
       governmentID
     } = req.body;
-     if (!req.fileLocations[0]) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Image not found" });
-    }
 
     // Basic validation for all users
     if (!name || !email || !password || !mobileNumber || !gender) {
