@@ -4,8 +4,8 @@ const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
+const { getLevelFromPoints } = require("../../utils/getLevelFromPoints");  
 
-// 📌 Start a quiz
 exports.startQuiz = async (req, res) => {
   try {
     const { user, quiz } = req.body;
@@ -26,42 +26,52 @@ exports.startQuiz = async (req, res) => {
   }
 };
 
-// 📌 Submit quiz answers
 exports.submitQuizAnswers = async (req, res) => {
   try {
     const { quiz, user, answers } = req.body;
 
-    if (!quiz || !user || !answers || !Array.isArray(answers)) {
+    if (!quiz || !user || !Array.isArray(answers)) {
       return res.status(400).json({ success: false, message: "Invalid input" });
     }
 
-    const existingAttempt = await QuizAttempt.findOne({ user, quiz });
     const fullQuiz = await Quiz.findById(quiz).populate("questions");
-
     if (!fullQuiz) {
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
 
-    const totalQuestions = Math.max(fullQuiz.questions.length, 1);
     const correctAnswersMap = new Map(
       fullQuiz.questions.map((q) => [q._id.toString(), q.correctAnswer])
     );
 
-    const score = answers.reduce((acc, { questionId, selectedOption }) => {
+    const totalQuestions = fullQuiz.questions.length || 1;
+    const correctCount = answers.reduce((acc, { questionId, selectedOption }) => {
       return correctAnswersMap.get(questionId) === selectedOption ? acc + 1 : acc;
     }, 0);
 
-    const percentage = ((score / totalQuestions) * 100).toFixed(2);
+    const percentage = ((correctCount / totalQuestions) * 100).toFixed(2);
 
-    const quizAttempt = new QuizAttempt({
+    const maxPoints = fullQuiz.points || 10;
+    const earnedPoints = Math.floor((correctCount / totalQuestions) * maxPoints);
+
+    await QuizAttempt.create({
       quiz,
       user,
-      score,
+      score: earnedPoints,
       totalQuestions,
       percentage,
     });
 
-    await quizAttempt.save();
+    const userDoc = await User.findById(user);
+    userDoc.quizPoints = (userDoc.quizPoints || 0) + earnedPoints;
+
+    const videoPts = userDoc.videoPoints || 0;
+    userDoc.totalPoints = userDoc.quizPoints + videoPts;
+
+    const newLevel = getLevelFromPoints(userDoc.totalPoints);
+    const leveledUp = newLevel > (userDoc.level || 1);
+    if (leveledUp) userDoc.level = newLevel;
+
+    await userDoc.save();
 
     sendNotification(
       user,
@@ -69,28 +79,33 @@ exports.submitQuizAnswers = async (req, res) => {
       "promotional"
     );
 
-    await User.findByIdAndUpdate(user, { $inc: { quizPoints: score } });
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Quiz submitted successfully",
-      score,
+      score: earnedPoints,
+      correctAnswers: correctCount,
       totalQuestions,
-      correctAnswers: score,
-      wrongAnswers: totalQuestions - score,
-      pointsEarned: score,
       percentage: `${percentage}%`,
+      leveledUp,
+      newLevel,
+      totalPoints: userDoc.totalPoints,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error submitting quiz", error: error.message });
+    console.error("Submit Quiz Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Quiz submission failed",
+      error: error.message,
+    });
   }
 };
 
-// 📌 Get a user's quiz progress
+
 exports.getUserAttempts = async (req, res) => {
   try {
     const { userId } = req.params;
-
+    
     const progress = await QuizAttempt.find({ user: userId })
       .populate("quiz")
       .sort({ updatedAt: -1 });
@@ -101,7 +116,6 @@ exports.getUserAttempts = async (req, res) => {
   }
 };
 
-// 📌 Claim quiz reward
 exports.claimQuizReward = async (req, res) => {
   try {
     const userId = req.user.id; // from auth middleware
@@ -111,26 +125,29 @@ exports.claimQuizReward = async (req, res) => {
       return res.status(400).json({ success: false, message: "Quiz ID is required" });
     }
 
-    const attempt = await QuizAttempt.findOne({ user: userId, quiz });
+    const attempt = await QuizAttempt.findOne({ user: userId, quiz }).sort({ createdAt: -1 });
 
     if (!attempt) {
       return res.status(404).json({ success: false, message: "Quiz attempt not found" });
     }
 
-    // You can uncomment this after testing
-    // if (attempt.rewardClaimed) {
-    //   return res.status(400).json({ success: false, message: "Reward already claimed" });
-    // }
+    // 🛑 Already claimed?
+    const existingClaim = await RewardClaimRequest.findOne({ user: userId, quiz });
 
-    // const existingClaim = await RewardClaimRequest.findOne({ user: userId, quiz });
-    // if (existingClaim) {
-    //   return res.status(400).json({ success: false, message: "Reward claim already requested" });
-    // }
+    if (existingClaim) {
+      return res.status(400).json({ success: false, message: "Reward already claimed or pending approval." });
+    }
+
+    const quizData = await Quiz.findById(quiz);
+    const rewardAmount = quizData?.points || 5;
 
     await RewardClaimRequest.create({
       user: userId,
       quiz,
+      attempt: attempt._id,
       score: attempt.score,
+      rewardAmount,
+      status: "pending", // default
     });
 
     res.status(200).json({
@@ -138,11 +155,15 @@ exports.claimQuizReward = async (req, res) => {
       message: "Reward claim submitted for admin approval.",
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to submit reward claim", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit reward claim",
+      error: err.message,
+    });
   }
 };
 
-// 📌 Leaderboard
+
 exports.getLeaderboard = async (req, res) => {
   try {
     const leaderboard = await QuizAttempt.aggregate([

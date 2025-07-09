@@ -40,8 +40,18 @@ const UserSchema = new Schema(
       required: true,
       unique: true,
     },
-    level: { type: String },
+    level: { type: Number, default: 1 },
     quizPoints: { type: Number, default: 0 },
+    videoPoints: { type: Number, default: 0 },
+    totalPoints: { type: Number, default: 0 },
+    claimedRewards: [
+      {
+        level: Number,
+        activity: String, // 'quiz' or 'video'
+        claimedAt: { type: Date, default: Date.now },
+      },
+    ],
+
     cryptoBalance: { type: String },
     mpinHash: { type: String },
     mpinResetOtp: { type: String, select: false },

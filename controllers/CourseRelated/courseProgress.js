@@ -5,6 +5,8 @@ const User = require("../../models/userModel");
 const {
   convertSecondsToDuration,
 } = require("../../utils/convertSecondsToTime");
+const { getLevelFromPoints } = require("../../utils/getLevelFromPoints");
+
 
 exports.startCourse = async (req, res) => {
   try {
@@ -59,6 +61,13 @@ exports.updatecourseProgress = async (req, res) => {
     const { userId, courseId, SectionId } = req.body;
 
     let progress = await courseProgress.findOne({ userId, courseId });
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    let isNewSection = false;
 
     if (!progress) {
       progress = new courseProgress({
@@ -67,24 +76,45 @@ exports.updatecourseProgress = async (req, res) => {
         completedVideos: [],
         lastWatched: SectionId,
       });
+      isNewSection = true;
     }
 
-    // Add subsection if not already completed
+    // Add new section if not already completed
     if (!progress.completedVideos.includes(SectionId)) {
       progress.completedVideos.push(SectionId);
+      isNewSection = true;
     }
 
     progress.lastWatched = SectionId;
-
     await progress.save();
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Progress updated", progress });
+    if (isNewSection) {
+      // Reward 5 points for new section watched
+      user.videoPoints = (user.videoPoints || 0) + 5;
+      user.totalPoints = (user.quizPoints || 0) + user.videoPoints;
+
+      const newLevel = getLevelFromPoints(user.totalPoints);
+      const leveledUp = newLevel > (user.level || 1);
+
+      if (leveledUp) {
+        user.level = newLevel;
+      }
+
+      await user.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Progress updated",
+      progress,
+      videoPoints: user.videoPoints,
+      totalPoints: user.totalPoints,
+      level: user.level,
+    });
   } catch (error) {
     return res
       .status(500)
-      .json({ success: false, message: "Error updating progress", error });
+      .json({ success: false, message: "Error updating progress", error: error.message });
   }
 };
 
