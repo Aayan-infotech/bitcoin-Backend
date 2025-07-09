@@ -231,9 +231,11 @@ const getDashboardData = async (req, res) => {
       userType: user.accountType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      biometricAuth: user.biometricAuth,
+      biometricAuth: user.biometric?.biometricStatus,
       notification: user.notificationPreferences,
       mpin: user.mpinHash ? true : false,
+      totalPoints: user.totalPoints ,
+      level: user.level 
     };
 
     res.status(200).json({
