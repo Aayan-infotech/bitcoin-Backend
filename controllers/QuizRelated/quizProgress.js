@@ -11,8 +11,8 @@ exports.startQuiz = async (req, res) => {
     const { userId, quizId } = req.body;
 
     const newAttempt = new QuizAttempt({
-      userId,
-      quizId,
+      user:userId,
+      quiz:quizId,
       score: 0,
       totalQuestions: 0,
       percentage: 0,
