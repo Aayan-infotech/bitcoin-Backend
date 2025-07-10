@@ -54,8 +54,8 @@ exports.submitQuizAnswers = async (req, res) => {
     const earnedPoints = Math.floor((correctCount / totalQuestions) * maxPoints);
 
     await QuizAttempt.create({
-      quizId,
-      userId,
+      quiz:quizId,
+      user:userId,
       score: earnedPoints,
       totalQuestions,
       percentage,
