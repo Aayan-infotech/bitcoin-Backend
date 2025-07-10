@@ -7,7 +7,6 @@ const {
 } = require("../../utils/convertSecondsToTime");
 const { getLevelFromPoints } = require("../../utils/getLevelFromPoints");
 
-
 exports.startCourse = async (req, res) => {
   try {
     const { userId, courseId } = req.body;
@@ -46,7 +45,7 @@ exports.startCourse = async (req, res) => {
       success: true,
       message: "Course started successfully.",
       progress,
-      userCourses: user.Courses, // Returning updated enrolled courses for debugging
+      userCourses: user.Courses, 
     });
   } catch (error) {
     console.error("Error starting course:", error);
@@ -64,7 +63,9 @@ exports.updatecourseProgress = async (req, res) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     let isNewSection = false;
@@ -79,7 +80,6 @@ exports.updatecourseProgress = async (req, res) => {
       isNewSection = true;
     }
 
-    // Add new section if not already completed
     if (!progress.completedVideos.includes(SectionId)) {
       progress.completedVideos.push(SectionId);
       isNewSection = true;
@@ -89,7 +89,6 @@ exports.updatecourseProgress = async (req, res) => {
     await progress.save();
 
     if (isNewSection) {
-      // Reward 5 points for new section watched
       user.videoPoints = (user.videoPoints || 0) + 5;
       user.totalPoints = (user.quizPoints || 0) + user.videoPoints;
 
@@ -114,7 +113,11 @@ exports.updatecourseProgress = async (req, res) => {
   } catch (error) {
     return res
       .status(500)
-      .json({ success: false, message: "Error updating progress", error: error.message });
+      .json({
+        success: false,
+        message: "Error updating progress",
+        error: error.message,
+      });
   }
 };
 
@@ -210,8 +213,8 @@ exports.getCourseProgressForUser = async (req, res) => {
     const sections = course.courseContent.map((section) => ({
       sectionId: section._id,
       title: section.title,
-      videoUrl:section.videoUrl,
-      description:section.description,
+      videoUrl: section.videoUrl,
+      description: section.description,
       duration: convertSecondsToDuration(section.timeDuration),
       isCompleted: completedVideoIds.includes(section._id.toString()),
     }));
@@ -230,8 +233,10 @@ exports.getCourseProgressForUser = async (req, res) => {
     console.error("Error fetching course progress:", error);
     return res
       .status(500)
-      .json({ success: false, message: "Error fetching course progress", error });
+      .json({
+        success: false,
+        message: "Error fetching course progress",
+        error,
+      });
   }
 };
-
-
