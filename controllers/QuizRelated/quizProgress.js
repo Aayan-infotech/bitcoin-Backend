@@ -28,13 +28,13 @@ exports.startQuiz = async (req, res) => {
 
 exports.submitQuizAnswers = async (req, res) => {
   try {
-    const { quiz, user, answers } = req.body;
+    const { quizId, userId, answers } = req.body;
 
-    if (!quiz || !user || !Array.isArray(answers)) {
+    if (!quizId || !userId || !Array.isArray(answers)) {
       return res.status(400).json({ success: false, message: "Invalid input" });
     }
 
-    const fullQuiz = await Quiz.findById(quiz).populate("questions");
+    const fullQuiz = await Quiz.findById(quizId).populate("questions");
     if (!fullQuiz) {
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
@@ -54,14 +54,14 @@ exports.submitQuizAnswers = async (req, res) => {
     const earnedPoints = Math.floor((correctCount / totalQuestions) * maxPoints);
 
     await QuizAttempt.create({
-      quiz,
-      user,
+      quizId,
+      userId,
       score: earnedPoints,
       totalQuestions,
       percentage,
     });
 
-    const userDoc = await User.findById(user);
+    const userDoc = await User.findById(userId);
     userDoc.quizPoints = (userDoc.quizPoints || 0) + earnedPoints;
 
     const videoPts = userDoc.videoPoints || 0;
@@ -74,7 +74,7 @@ exports.submitQuizAnswers = async (req, res) => {
     await userDoc.save();
 
     sendNotification(
-      user,
+      userId,
       `You scored ${percentage}% on the quiz: ${fullQuiz.title}`,
       "promotional"
     );
