@@ -119,7 +119,7 @@ exports.getUserAttempts = async (req, res) => {
 exports.claimQuizReward = async (req, res) => {
   try {
     const userId = req.user.id; // from auth middleware
-    const { quiz } = req.body;
+    const { quizId:quiz} = req.body;
 
     if (!quiz) {
       return res.status(400).json({ success: false, message: "Quiz ID is required" });
