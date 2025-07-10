@@ -8,7 +8,7 @@ const { getLevelFromPoints } = require("../../utils/getLevelFromPoints");
 
 exports.startQuiz = async (req, res) => {
   try {
-    const { user, quiz } = req.body;
+    const { userId, quizId } = req.body;
 
     const newAttempt = new QuizAttempt({
       user,
@@ -131,7 +131,6 @@ exports.claimQuizReward = async (req, res) => {
       return res.status(404).json({ success: false, message: "Quiz attempt not found" });
     }
 
-    // 🛑 Already claimed?
     const existingClaim = await RewardClaimRequest.findOne({ user: userId, quiz });
 
     if (existingClaim) {
