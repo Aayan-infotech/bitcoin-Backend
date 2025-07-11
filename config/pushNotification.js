@@ -1,12 +1,13 @@
 const Notification = require("../models/Notification");
 const User = require("../models/userModel");
-const admin = require("./firebase"); // Firebase Admin SDK setup
+const firebasePromise = require("./firebase");
 
 const sendNotification = async (userIds, message, type = "promotional", sentBy, broadcastId = null) => {
   try {
+    const admin = await firebasePromise; 
+
     const ids = Array.isArray(userIds) ? userIds : [userIds];
 
-    // Step 1: Save all notifications in DB
     const notificationsToInsert = ids.map((userId) => ({
       userId,
       message,
@@ -17,7 +18,7 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
 
     const savedNotifications = await Notification.insertMany(notificationsToInsert);
 
-    // Step 2: Send push notifications to users with FCM tokens
+    // Step 2: Send push notifications
     const usersWithTokens = await User.find({
       _id: { $in: ids },
       deviceToken: { $exists: true, $ne: null },
@@ -43,7 +44,6 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
 
       try {
         const response = await admin.messaging().send(fcmMessage);
-        console.log(`Push sent to ${user._id}:`, response);
       } catch (err) {
         console.error(`FCM error for ${user._id}:`, err.message);
       }

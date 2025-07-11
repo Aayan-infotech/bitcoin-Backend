@@ -43,6 +43,47 @@ const getAllODetails = async (req, res) => {
   }
 };
 
-module.exports={getAllODetails,createODetails}
+const updateODetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { headline, subHeadLine } = req.body;
+
+    const updatePayload = {
+      headline,
+      subHeadLine,
+    };
+
+    // If a new video file is uploaded
+    if (req.fileLocations && req.fileLocations.length > 0) {
+      updatePayload.video = [req.fileLocations[0]];
+    }
+
+    const updatedEntry = await ODetails.findByIdAndUpdate(id, updatePayload, {
+      new: true,
+    });
+
+    if (!updatedEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "O Details not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "O Details updated successfully",
+      data: updatedEntry,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update O Details",
+      error: error.message,
+    });
+  }
+};
+
+
+module.exports={getAllODetails,createODetails,updateODetails}
 
 

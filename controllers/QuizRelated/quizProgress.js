@@ -142,11 +142,11 @@ exports.claimQuizReward = async (req, res) => {
 
     await RewardClaimRequest.create({
       user: userId,
-      quiz,
+      quizId:quiz,
       attempt: attempt._id,
       score: attempt.score,
       rewardAmount,
-      status: "pending", // default
+      status: "Pending", // default
     });
 
     res.status(200).json({

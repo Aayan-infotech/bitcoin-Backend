@@ -1,8 +1,21 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("./coin01-ea8de-firebase-adminsdk-fbsvc-3f6c7ecef0.json");
+const { getSecrets } = require("./awsSecrets");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+const initializeFirebase = async () => {
+  const secrets = await getSecrets();
 
-module.exports = admin;
+  const firebaseConfig =
+    typeof secrets.FIREBASE_CONFIG === "string"
+      ? JSON.parse(secrets.FIREBASE_CONFIG)
+      : secrets.FIREBASE_CONFIG;
+
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseConfig),
+  });
+
+  console.log("✅ Firebase initialized");
+
+  return admin;
+};
+
+module.exports = initializeFirebase();
