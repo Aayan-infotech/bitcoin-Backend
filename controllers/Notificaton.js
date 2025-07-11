@@ -69,7 +69,7 @@ exports.getAllNotifications = async (req, res) => {
       message: "Error fetching notifications",
     });
   }
-}
+};
 
 exports.getUserNotifications = async (req, res) => {
   try {
@@ -175,5 +175,31 @@ exports.createAdminPushNotification = async (req, res) => {
   } catch (error) {
     console.error("Error sending admin push notification:", error);
     return res.status(500).json({ success: false, message: "Server error." });
+  }
+};
+exports.deleteUserNotification = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Notification.deleteMany({ userId });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Notifications Deleted Successfully" });
+  } catch (error) {
+    console.error("Error sending admin push notification:", error);
+    return res.status(500).json({ success: false, message:"Server error." });
+  }
+};
+exports.deleteNotification = async (req, res) => {
+  try {
+    const {id} = req.params;
+    await Notification.findByIdAndDelete(id);
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Notification Deleted Successfully" });
+  } catch (error) {
+    console.error("Error sending admin push notification:", error);
+    return res.status(500).json({ success: false, message:"Server error." });
   }
 };
