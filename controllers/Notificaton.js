@@ -5,6 +5,10 @@ const User = require("../models/userModel");
 
 exports.getAllNotifications = async (req, res) => {
   try {
+    let { page = 1, limit = 10 } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
     const allNotifications = await Notification.find({
       type: "promotional",
       userId: { $ne: null },
@@ -14,13 +18,7 @@ exports.getAllNotifications = async (req, res) => {
       .populate("sentBy", "name email")
       .sort({ createdAt: -1 });
 
-    if (!allNotifications || allNotifications.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No messages found.",
-      });
-    }
-
+    // Step 2: Group notifications by broadcastId or _id
     const groupedMap = new Map();
 
     for (const notif of allNotifications) {
@@ -42,7 +40,8 @@ exports.getAllNotifications = async (req, res) => {
       }
     }
 
-    const formatted = Array.from(groupedMap.values()).map((item) => ({
+    // Step 3: Format grouped array
+    const groupedArray = Array.from(groupedMap.values()).map((item) => ({
       _id: item._id,
       message: item.message,
       type: item.type,
@@ -51,11 +50,17 @@ exports.getAllNotifications = async (req, res) => {
       sentTo: item.isBroadcast ? "Sent to All" : item.recipients[0],
       createdAt: item.createdAt,
     }));
+    const totalCount = groupedArray.length;
+    const totalPages = Math.ceil(totalCount / limit);
+    const paginatedData = groupedArray.slice((page - 1) * limit, page * limit);
 
     return res.status(200).json({
       success: true,
       message: "All messages fetched successfully",
-      data: formatted,
+      data: paginatedData,
+      total: totalCount,
+      totalPages,
+      currentPage: page,
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -64,10 +69,9 @@ exports.getAllNotifications = async (req, res) => {
       message: "Error fetching notifications",
     });
   }
-};
+}
 
-
-exports.getUserNotifications = async (req, res) => {  
+exports.getUserNotifications = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
@@ -133,16 +137,16 @@ exports.updateNotificationPreferences = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }
-
 };
-
 
 exports.createAdminPushNotification = async (req, res) => {
   try {
     const { message, type = "promotional", targetUserId } = req.body;
 
     if (!message) {
-      return res.status(400).json({ success: false, message: "Message is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Message is required." });
     }
 
     if (!req.user?.id) {
@@ -152,9 +156,11 @@ exports.createAdminPushNotification = async (req, res) => {
     if (targetUserId) {
       await sendNotification(targetUserId, message, type, req.user.id);
     } else {
-      const users = await User.find({ });
+      const users = await User.find({});
       if (!users.length) {
-        return res.status(404).json({ success: false, message: "No users found ." });
+        return res
+          .status(404)
+          .json({ success: false, message: "No users found ." });
       }
 
       const userIds = users.map((user) => user._id);
@@ -163,7 +169,9 @@ exports.createAdminPushNotification = async (req, res) => {
       await sendNotification(userIds, message, type, req.user.id, broadcastId);
     }
 
-    return res.status(200).json({ success: true, message: "Notification(s) sent." });
+    return res
+      .status(200)
+      .json({ success: true, message: "Notification(s) sent." });
   } catch (error) {
     console.error("Error sending admin push notification:", error);
     return res.status(500).json({ success: false, message: "Server error." });
