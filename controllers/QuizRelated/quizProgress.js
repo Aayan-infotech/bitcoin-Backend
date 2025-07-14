@@ -162,7 +162,6 @@ exports.claimQuizReward = async (req, res) => {
   }
 };
 
-
 exports.getLeaderboard = async (req, res) => {
   try {
     const leaderboard = await QuizAttempt.aggregate([

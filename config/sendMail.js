@@ -22,11 +22,11 @@ const sendEmail = async (to, subject, html) => {
       },
       tls: {
         rejectUnauthorized: false,
-      },
+      },  
     });
 
     const mailOptions = {
-      from: secretsCache.EMAIL_USER || process.env.EMAIL_USER,
+      from: "Bitcoin wallet",
       to,
       subject,
       html,
