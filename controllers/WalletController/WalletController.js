@@ -2,6 +2,7 @@ const RewardClaimRequestModel = require("../../models/RewardClaimRequestModel");
 const User = require("../../models/userModel");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
+const Transaction = require("../../models/paymentRelated/TransactioModel");
 const {
   sendTransaction,
   getTransaction,
@@ -117,6 +118,7 @@ exports.getPendingRewardClaims = async (req, res) => {
     });
   }
 };
+
 exports.approveClaim = async (req, res) => {
   try {
     const { claimId } = req.params;
@@ -314,5 +316,86 @@ exports.sendCoinsUsers = async (req, res) => {
   } catch (err) {
     console.error("Transaction error:", err);
     res.status(500).json({ error: "Transaction failed", details: err.message });
+  }
+};
+
+exports.getUserTransactionDetail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Step 1: Get the user's wallet address
+    const user = await User.findById(userId).select("wallet_address");
+    if (!user || !user.wallet_address) {
+      return res.status(404).json({
+        success: false,
+        message: "Wallet address not found for user",
+      });
+    }
+
+    const walletAddress = user.wallet_address;
+
+    // Step 2: Filter transactions by user's walletAddress (as 'from')
+    const result = await Transaction.aggregate([
+      {
+        $match: {
+          from: walletAddress,
+        },
+      },
+      {
+        $group: {
+          _id: "$from",
+          totalAmount: {
+            $sum: {
+              $toDouble: { $trim: { input: "$amount", chars: " ETH" } },
+            },
+          },
+          totalFee: {
+            $sum: {
+              $toDouble: { $trim: { input: "$totalFee", chars: " ETH" } },
+            },
+          },
+          totalGasUsed: {
+            $sum: { $toInt: "$gasUsed" },
+          },
+          avgGasPrice: {
+            $avg: {
+              $toDouble: { $trim: { input: "$gasPrice", chars: " gwei" } },
+            },
+          },
+          txCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          from: "$_id",
+          _id: 0,
+          fees: [
+            { type: "totalAmount", value: "$totalAmount" },
+            { type: "totalFee", value: "$totalFee" },
+            { type: "totalGasUsed", value: "$totalGasUsed" },
+            { type: "avgGasPrice", value: "$avgGasPrice" },
+            { type: "txCount", value: "$txCount" },
+          ],
+        },
+      },
+    ]);
+    const formattedFees = result[0]?.fees.map((fee) => ({
+      type: fee.type,
+      value: Number(fee.value.toFixed(12)), 
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        from: result[0]?.from || walletAddress,
+        fees: formattedFees,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getUserTransactionDetail:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while fetching user's transaction summary",
+    });
   }
 };

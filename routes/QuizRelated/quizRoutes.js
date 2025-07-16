@@ -48,6 +48,6 @@ router.patch("/update-question/:questionId", updateQuestion);
 // ********************************************
 
 router.post("/get-user-progress/:userId", getUserAttempts);
-router.get("/get-leaders", getLeaderboard);
+router.get("/get-leaders", auth, getLeaderboard);
 
 module.exports = router;

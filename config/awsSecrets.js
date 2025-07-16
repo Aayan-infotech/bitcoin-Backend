@@ -3,7 +3,7 @@ const {
   GetSecretValueCommand
 } = require("@aws-sdk/client-secrets-manager");
 
-const secretName = process.env.USER || "aws-secret"; // stored in AWS
+const secretName = process.env.USER || "bitcoin"; // stored in AWS
 const region = process.env.AWS_REGION || "us-east-1"; // adjust as needed
 
 let cachedSecrets = null;

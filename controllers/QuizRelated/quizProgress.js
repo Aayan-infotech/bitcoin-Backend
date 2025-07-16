@@ -4,15 +4,33 @@ const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
-const { getLevelFromPoints } = require("../../utils/getLevelFromPoints");  
+const { getLevelFromPoints,getLevelProgress } = require("../../utils/getLevelFromPoints"); 
 
 exports.startQuiz = async (req, res) => {
   try {
     const { userId, quizId } = req.body;
 
+    if (!userId || !quizId) {
+      return res.status(400).json({ success: false, message: "Missing userId or quizId" });
+    }
+
+    const alreadyPassed = await QuizAttempt.findOne({
+      quiz: quizId,
+      user: userId,
+      percentage: { $gte: 80 },
+    });
+
+    if (alreadyPassed) {
+      return res.status(400).json({
+        success: false,
+        message: "You already passed this quiz with 80% or more. Re-attempt not allowed.",
+      });
+    }
+
+    // ✅ Proceed with starting the quiz
     const newAttempt = new QuizAttempt({
-      user:userId,
-      quiz:quizId,
+      user: userId,
+      quiz: quizId,
       score: 0,
       totalQuestions: 0,
       percentage: 0,
@@ -20,9 +38,19 @@ exports.startQuiz = async (req, res) => {
 
     await newAttempt.save();
 
-    res.status(201).json({ success: true, message: "Quiz started", attempt: newAttempt });
+    res.status(201).json({
+      success: true,
+      message: "Quiz started",
+      attempt: newAttempt,
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error starting quiz", error });
+    console.error("Start quiz error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error starting quiz",
+      error: error.message,
+    });
   }
 };
 
@@ -164,58 +192,44 @@ exports.claimQuizReward = async (req, res) => {
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const leaderboard = await QuizAttempt.aggregate([
-      {
-        $match: {
-          user: { $ne: null },
-        },
-      },
-      {
-        $group: {
-          _id: "$user",
-          totalScore: { $sum: "$score" },
-          totalQuestions: { $sum: "$totalQuestions" },
-          attemptCount: { $sum: 1 },
-        },
-      },
-      {
-        $addFields: {
-          percentage: {
-            $cond: [
-              { $eq: ["$totalQuestions", 0] },
-              0,
-              { $multiply: [{ $divide: ["$totalScore", "$totalQuestions"] }, 100] }
-            ],
-          },
-        },
-      },
-      { $sort: { percentage: -1 } },
-      { $limit: 10 },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
-      { $unwind: "$user" },
-      {
-        $project: {
-          _id: 0,
-          userId: "$user._id",
-          name: "$user.name",
-          image: "$user.image",
-          totalScore: 1,
-          totalQuestions: 1,
-          percentage: { $round: ["$percentage", 2] },
-          attemptCount: 1
-        }
-      }
-    ]);
+    const currentUserId = req.user.id;
 
-    res.status(200).json({ success: true, leaderboard });
+    const topUsers = await User.find({ totalPoints: { $gt: 0 } })
+      .sort({ totalPoints: -1 })
+      .limit(10)
+      .select("name image totalPoints");
+
+    const leaderboard = topUsers.map((user) => ({
+      userId: user._id,
+      name: user.name,
+      image: user.image,
+      totalPoints: user.totalPoints,
+      level: getLevelProgress(user.totalPoints).level,
+    }));
+
+    const currentUser = await User.findById(currentUserId).select(
+      "totalPoints name image"
+    );
+
+    const currentUserStats = getLevelProgress(currentUser.totalPoints || 0);
+
+    return res.status(200).json({
+      success: true,
+      leaderboard,
+      currentUser: {
+        userId: currentUser._id,
+        name: currentUser.name,
+        image: currentUser.image,
+        ...currentUserStats, 
+      },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching leaderboard", error });
+    console.error("Error fetching leaderboard:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching leaderboard",
+    });
   }
 };
+
+

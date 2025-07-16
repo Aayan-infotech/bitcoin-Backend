@@ -13,14 +13,14 @@ const secretsManagerClient = new SecretsManagerClient({
 // Fetch AWS credentials and config
 const getAwsCredentials = async () => {
   const command = new GetSecretValueCommand({
-    SecretId: process.env.AWS_SECRET_NAME || "aws-secret",
+    SecretId: process.env.AWS_SECRET_NAME || "bitcoin",
   });
 
   const data = await secretsManagerClient.send(command);
 
   if (!data.SecretString) {
     throw new Error("No secret string returned from AWS Secrets Manager");
-  }
+  } 
 
   const secret = JSON.parse(data.SecretString);
 
