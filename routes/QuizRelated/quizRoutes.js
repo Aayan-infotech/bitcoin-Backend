@@ -17,7 +17,7 @@ const {
   startQuiz,
   submitQuizAnswers,
   getUserAttempts,
-  getLeaderboard,
+  getLeaderboard,yourLearningHub
 } = require("../../controllers/QuizRelated/quizProgress");
 const router = express.Router();
 
@@ -49,5 +49,6 @@ router.patch("/update-question/:questionId", updateQuestion);
 
 router.post("/get-user-progress/:userId", getUserAttempts);
 router.get("/get-leaders", auth, getLeaderboard);
+router.get("/get-learning-hub", auth, yourLearningHub);
 
 module.exports = router;

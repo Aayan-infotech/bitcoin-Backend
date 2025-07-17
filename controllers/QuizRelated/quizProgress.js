@@ -4,14 +4,19 @@ const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
 const { sendNotification } = require("../../config/pushNotification");
 const RewardClaimRequest = require("../../models/RewardClaimRequestModel");
-const { getLevelFromPoints,getLevelProgress } = require("../../utils/getLevelFromPoints"); 
+const {
+  getLevelFromPoints,
+  getLevelProgress,
+} = require("../../utils/getLevelFromPoints");
 
 exports.startQuiz = async (req, res) => {
   try {
     const { userId, quizId } = req.body;
 
     if (!userId || !quizId) {
-      return res.status(400).json({ success: false, message: "Missing userId or quizId" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing userId or quizId" });
     }
 
     const alreadyPassed = await QuizAttempt.findOne({
@@ -23,7 +28,8 @@ exports.startQuiz = async (req, res) => {
     if (alreadyPassed) {
       return res.status(400).json({
         success: false,
-        message: "You already passed this quiz with 80% or more. Re-attempt not allowed.",
+        message:
+          "You already passed this quiz with 80% or more. Re-attempt not allowed.",
       });
     }
 
@@ -43,7 +49,6 @@ exports.startQuiz = async (req, res) => {
       message: "Quiz started",
       attempt: newAttempt,
     });
-
   } catch (error) {
     console.error("Start quiz error:", error);
     res.status(500).json({
@@ -64,7 +69,9 @@ exports.submitQuizAnswers = async (req, res) => {
 
     const fullQuiz = await Quiz.findById(quizId).populate("questions");
     if (!fullQuiz) {
-      return res.status(404).json({ success: false, message: "Quiz not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz not found" });
     }
 
     const correctAnswersMap = new Map(
@@ -72,18 +79,25 @@ exports.submitQuizAnswers = async (req, res) => {
     );
 
     const totalQuestions = fullQuiz.questions.length || 1;
-    const correctCount = answers.reduce((acc, { questionId, selectedOption }) => {
-      return correctAnswersMap.get(questionId) === selectedOption ? acc + 1 : acc;
-    }, 0);
+    const correctCount = answers.reduce(
+      (acc, { questionId, selectedOption }) => {
+        return correctAnswersMap.get(questionId) === selectedOption
+          ? acc + 1
+          : acc;
+      },
+      0
+    );
 
     const percentage = ((correctCount / totalQuestions) * 100).toFixed(2);
 
     const maxPoints = fullQuiz.points || 10;
-    const earnedPoints = Math.floor((correctCount / totalQuestions) * maxPoints);
+    const earnedPoints = Math.floor(
+      (correctCount / totalQuestions) * maxPoints
+    );
 
     await QuizAttempt.create({
-      quiz:quizId,
-      user:userId,
+      quiz: quizId,
+      user: userId,
       score: earnedPoints,
       totalQuestions,
       percentage,
@@ -118,7 +132,6 @@ exports.submitQuizAnswers = async (req, res) => {
       newLevel,
       totalPoints: userDoc.totalPoints,
     });
-
   } catch (error) {
     console.error("Submit Quiz Error:", error);
     return res.status(500).json({
@@ -129,40 +142,55 @@ exports.submitQuizAnswers = async (req, res) => {
   }
 };
 
-
 exports.getUserAttempts = async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const progress = await QuizAttempt.find({ user: userId })
       .populate("quiz")
       .sort({ updatedAt: -1 });
 
     res.status(200).json({ success: true, progress });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching progress", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching progress", error });
   }
 };
 
 exports.claimQuizReward = async (req, res) => {
   try {
     const userId = req.user.id; // from auth middleware
-    const { quizId:quiz} = req.body;
+    const { quizId: quiz } = req.body;
 
     if (!quiz) {
-      return res.status(400).json({ success: false, message: "Quiz ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Quiz ID is required" });
     }
 
-    const attempt = await QuizAttempt.findOne({ user: userId, quiz }).sort({ createdAt: -1 });
+    const attempt = await QuizAttempt.findOne({ user: userId, quiz }).sort({
+      createdAt: -1,
+    });
 
     if (!attempt) {
-      return res.status(404).json({ success: false, message: "Quiz attempt not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz attempt not found" });
     }
 
-    const existingClaim = await RewardClaimRequest.findOne({ user: userId, quiz });
+    const existingClaim = await RewardClaimRequest.findOne({
+      user: userId,
+      quiz,
+    });
 
     if (existingClaim) {
-      return res.status(400).json({ success: false, message: "Reward already claimed or pending approval." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Reward already claimed or pending approval.",
+        });
     }
 
     const quizData = await Quiz.findById(quiz);
@@ -170,7 +198,7 @@ exports.claimQuizReward = async (req, res) => {
 
     await RewardClaimRequest.create({
       user: userId,
-      quizId:quiz,
+      quizId: quiz,
       attempt: attempt._id,
       score: attempt.score,
       rewardAmount,
@@ -220,7 +248,7 @@ exports.getLeaderboard = async (req, res) => {
         userId: currentUser._id,
         name: currentUser.name,
         image: currentUser.image,
-        ...currentUserStats, 
+        ...currentUserStats,
       },
     });
   } catch (error) {
@@ -233,3 +261,69 @@ exports.getLeaderboard = async (req, res) => {
 };
 
 
+exports.yourLearningHub = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+
+    const lastAttempt = await QuizAttempt.findOne({ user: currentUserId })
+      .sort({ createdAt: -1 })
+      .populate("quiz");
+
+    const allLatestAttempts = await QuizAttempt.aggregate([
+      {
+        $match: { user: req.user._id }, 
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: "$quiz", 
+          quizId: { $first: "$quiz" },
+          percentage: { $first: "$percentage" },
+          score: { $first: "$score" },
+          totalQuestions: { $first: "$totalQuestions" },
+          createdAt: { $first: "$createdAt" },
+        },
+      },
+      {
+        $lookup: {
+          from: "quizzes", 
+          localField: "quizId",
+          foreignField: "_id",
+          as: "quiz",
+        },
+      },
+      {
+        $unwind: "$quiz",
+      },
+      {
+        $project: {
+          _id: 0,
+          quizId: 1,
+          percentage: 1,
+          score: 1,
+          totalQuestions: 1,
+          createdAt: 1,
+          quiz: {
+            title: "$quiz.title",
+            points: "$quiz.points",
+            description: "$quiz.description",
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      lastAttempt,
+      latestAttemptsByQuiz: allLatestAttempts,
+    });
+  } catch (error) {
+    console.error("Error fetching learning hub data:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching your learning hub data",
+    });
+  }
+};
