@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 const { getSecrets } = require("./awsSecrets");
 
 exports.connectToDb = async () => {
+  const secrets = await getSecrets(); // ✅ Await here
   try {
-    const secrets = await getSecrets(); // ✅ Await here
     await mongoose.connect(secrets.MONGO_URL);
     console.log("Connected to MongoDB Successfully");
   } catch (error) {
