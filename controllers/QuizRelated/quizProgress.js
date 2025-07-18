@@ -38,6 +38,7 @@ exports.startQuiz = async (req, res) => {
       quiz: quizId,
       score: 0,
       totalQuestions: 0,
+      correct: 0,
       percentage: 0,
     });
 
@@ -89,7 +90,7 @@ exports.submitQuizAnswers = async (req, res) => {
 
     const percentage = ((correctCount / totalQuestions) * 100).toFixed(2);
 
-    const maxPoints = fullQuiz.points || 10;
+    const maxPoints = totalQuestions*5;
     const earnedPoints = Math.floor(
       (correctCount / totalQuestions) * maxPoints
     );
@@ -98,6 +99,7 @@ exports.submitQuizAnswers = async (req, res) => {
       quiz: quizId,
       user: userId,
       score: earnedPoints,
+      correct:correctCount,
       totalQuestions,
       percentage,
     });
@@ -184,12 +186,10 @@ exports.claimQuizReward = async (req, res) => {
     });
 
     if (existingClaim) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Reward already claimed or pending approval.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Reward already claimed or pending approval.",
+      });
     }
 
     const quizData = await Quiz.findById(quiz);
@@ -259,7 +259,6 @@ exports.getLeaderboard = async (req, res) => {
   }
 };
 
-
 exports.yourLearningHub = async (req, res) => {
   try {
     const currentUserId = req.user.id;
@@ -268,56 +267,9 @@ exports.yourLearningHub = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("quiz");
 
-    const allLatestAttempts = await QuizAttempt.aggregate([
-      {
-        $match: { user: new mongoose.Types.ObjectId(req.user.id)}, 
-      
-      },
-      {
-        $sort: { createdAt: -1 },
-      },
-      {
-        $group: {
-          _id: "$quiz", 
-          quizId: { $first: "$quiz" },
-          percentage: { $first: "$percentage" },
-          score: { $first: "$score" },
-          totalQuestions: { $first: "$totalQuestions" },
-          createdAt: { $first: "$createdAt" },
-        },
-      },
-      {
-        $lookup: {
-          from: "quizzes", 
-          localField: "quizId",
-          foreignField: "_id",
-          as: "quiz",
-        },
-      },
-      {
-        $unwind: "$quiz",
-      },
-      {
-        $project: {
-          _id: 0,
-          quizId: 1,
-          percentage: 1,
-          score: 1,
-          totalQuestions: 1,
-          createdAt: 1,
-          quiz: {
-            title: "$quiz.title",
-            points: "$quiz.points",
-            description: "$quiz.description",
-          },
-        },
-      },
-    ]);
-
     res.status(200).json({
       success: true,
       lastAttempt,
-      latestAttemptsByQuiz: allLatestAttempts,
     });
   } catch (error) {
     console.error("Error fetching learning hub data:", error);

@@ -34,7 +34,7 @@ router.delete("/delete-quiz/:id", deleteQuizById);
 // quiz attempt related
 // *****************************************
 router.post("/start-quiz", startQuiz);
-router.post("/submit-answers", submitQuizAnswers);
+router.patch("/submit-answers", submitQuizAnswers);
 
 // ********************************************
 // question CRUD Related Routes

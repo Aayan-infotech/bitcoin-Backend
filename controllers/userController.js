@@ -281,7 +281,7 @@ const getUserTransactionHistory = async (req, res) => {
 
     const transactions = await Transaction.find({
       $or: [{ from: walletAddress }, { to: walletAddress }],
-    }).sort({ [sortField]: -1 }); // Descending order
+    }).sort({ [sortField]: -1 }); 
 
     const formatted = transactions.map((tx) => ({
       ...tx._doc,
@@ -294,7 +294,7 @@ const getUserTransactionHistory = async (req, res) => {
       data: formatted,
     });
   } catch (error) {
-    console.error("Error fetching transactions:", error);
+    console.error("Error fetching transactions:", error);  
     res.status(500).json({
       success: false,
       message: "Server error",

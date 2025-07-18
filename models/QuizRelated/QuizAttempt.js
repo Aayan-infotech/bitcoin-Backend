@@ -14,6 +14,7 @@ const QuizAttemptSchema = new mongoose.Schema(
     },
     score: { type: Number, required: true },
     totalQuestions: { type: Number, required: true },
+    correct: { type: Number},
     percentage: { type: Number, required: true },
     rewardClaimed: { type: Boolean, default: false },
   },
