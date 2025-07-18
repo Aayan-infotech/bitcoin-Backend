@@ -269,9 +269,20 @@ const getUserTransactionHistory = async (req, res) => {
       });
     }
 
+    const { sortBy = "date" } = req.query;
+
+    const sortFields = {
+      date: "createdAt",
+      amount: "amountValue",
+      fees: "totalFeeValue"
+    };
+
+    const sortField = sortFields[sortBy] || "createdAt";
+
     const transactions = await Transaction.find({
       $or: [{ from: walletAddress }, { to: walletAddress }],
-    }).sort({ timestamp: -1 });
+    }).sort({ [sortField]: -1 }); // Descending order
+
     const formatted = transactions.map((tx) => ({
       ...tx._doc,
       type: tx.from === walletAddress ? "Sent" : "Received",
@@ -279,7 +290,7 @@ const getUserTransactionHistory = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      count: transactions.length,
+      count: formatted.length,
       data: formatted,
     });
   } catch (error) {
@@ -290,6 +301,7 @@ const getUserTransactionHistory = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   getUserTransactionHistory,

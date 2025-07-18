@@ -1,4 +1,5 @@
 const Quiz = require("../../models/QuizRelated/QuizModel");
+const mongoose = require("mongoose");
 const Question = require("../../models/QuizRelated/QuestionsModel");
 const QuizAttempt = require("../../models/QuizRelated/QuizAttempt");
 const User = require("../../models/userModel");
@@ -26,14 +27,12 @@ exports.startQuiz = async (req, res) => {
     });
 
     if (alreadyPassed) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message:
           "You already passed this quiz with 80% or more. Re-attempt not allowed.",
       });
     }
-
-    // ✅ Proceed with starting the quiz
     const newAttempt = new QuizAttempt({
       user: userId,
       quiz: quizId,
@@ -271,7 +270,8 @@ exports.yourLearningHub = async (req, res) => {
 
     const allLatestAttempts = await QuizAttempt.aggregate([
       {
-        $match: { user: req.user._id }, 
+        $match: { user: new mongoose.Types.ObjectId(req.user.id)}, 
+      
       },
       {
         $sort: { createdAt: -1 },

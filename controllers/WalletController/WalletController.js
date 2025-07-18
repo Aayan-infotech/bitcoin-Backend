@@ -48,10 +48,13 @@ exports.sendCoins = async (req, res) => {
       gasUsed: gasUsed.toString(),
       gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
+      totalFeeValue: ethers.utils.formatEther(totalFee),
       amount: amount + " ETH",
+      amountValue: amount,
       status: receipt.status === 1 ? "Success" : "Failed",
       timestamp: new Date().toISOString(),
     });
+
     sendNotification(
       userId,
       `${amount} has been credited into your wallet`,
@@ -162,7 +165,9 @@ exports.approveClaim = async (req, res) => {
       gasUsed: gasUsed.toString(),
       gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
+      totalFeeValue: ethers.utils.formatEther(totalFee),
       amount: amount + " ETH",
+      amountValue: amount,
       status: receipt.status === 1 ? "Success" : "Failed",
       timestamp: new Date().toISOString(),
     });
@@ -275,7 +280,6 @@ exports.sendCoinsUsers = async (req, res) => {
     const gasUsed = receipt.gasUsed;
     const totalFee = gasPrice.mul(gasUsed);
 
-    // Save transaction
     await saveTransactionReceipt({
       from: userFrom.wallet_address,
       to: userIdTo,
@@ -284,12 +288,15 @@ exports.sendCoinsUsers = async (req, res) => {
       gasUsed: gasUsed.toString(),
       gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
       totalFee: ethers.utils.formatEther(totalFee) + " ETH",
+      totalFeeValue: ethers.utils.formatEther(totalFee),
       amount: amount + " ETH",
+      amountValue: amount,
       status: receipt.status === 1 ? "Success" : "Failed",
-      receiverName: receiverName,
-      amountInUsd: amountInUsd,
+      receiverName, 
+      amountInUsd, 
       timestamp: new Date().toISOString(),
     });
+
     await sendNotification(
       userto._id,
       `${userIdTo} has sent you ${amount} coins`,
@@ -323,7 +330,6 @@ exports.getUserTransactionDetail = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Step 1: Get the user's wallet address
     const user = await User.findById(userId).select("wallet_address");
     if (!user || !user.wallet_address) {
       return res.status(404).json({
@@ -334,7 +340,6 @@ exports.getUserTransactionDetail = async (req, res) => {
 
     const walletAddress = user.wallet_address;
 
-    // Step 2: Filter transactions by user's walletAddress (as 'from')
     const result = await Transaction.aggregate([
       {
         $match: {
@@ -381,7 +386,7 @@ exports.getUserTransactionDetail = async (req, res) => {
     ]);
     const formattedFees = result[0]?.fees.map((fee) => ({
       type: fee.type,
-      value: Number(fee.value.toFixed(12)), 
+      value: Number(fee.value.toFixed(12)),
     }));
 
     res.status(200).json({
