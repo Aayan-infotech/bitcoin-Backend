@@ -38,7 +38,7 @@ router.patch("/submit-answers", submitQuizAnswers);
 
 // ********************************************
 // question CRUD Related Routes
-// ********************************************
+// ******************************************
 router.post("/add-question/:quizId", addQuestionsToQuiz);
 router.delete("/delete-question", deleteQuestion);
 router.patch("/update-question/:questionId", updateQuestion);
