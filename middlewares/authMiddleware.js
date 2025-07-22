@@ -28,7 +28,7 @@ exports.auth = async (req, res, next) => {
       req.user = jwt.verify(token, secretsCache.JWT_SECRET);
       next();
     } catch (err) {
-      return res.status(500).json({ success: false,err:err?.message, message: "error occured while verifying the token" });
+      return res.status(401).json({ success: false,err:err?.message, message: "error occured while verifying the token" });
     }
   } catch (err) {
     console.error("Auth middleware error:", err);
