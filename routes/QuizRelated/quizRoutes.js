@@ -1,6 +1,6 @@
 const express = require("express");
 const {
-  createQuiz,
+  createQuiz,updateQuiz,
   getQuizById,
   getAllQuizzes,
   deleteQuizById,
@@ -26,6 +26,7 @@ const router = express.Router();
 // ********************************************
 router.post("/create-quiz", uploadToS3, createQuiz);
 router.get("/get-all-quizzes", getAllQuizzes);
+router.patch("/update-quiz/:id", uploadToS3,updateQuiz);
 router.get("/get-quizById/:id", getQuizById);
 router.put("/remove-question-from-quiz", removeQuestionFromQuiz);
 router.delete("/delete-quiz/:id", deleteQuizById);

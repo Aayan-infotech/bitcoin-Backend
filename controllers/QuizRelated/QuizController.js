@@ -50,6 +50,49 @@ exports.createQuiz = async (req, res) => {
   }
 };
 
+// ✅ update Quiz
+exports.updateQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, timeLimit, level } = req.body;
+
+    // Find the quiz first
+    const quiz = await Quiz.findById(id);
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        message: "Quiz not found",
+      });
+    }
+
+    // Update fields if provided
+    if (title) quiz.title = title;
+    if (description) quiz.description = description;
+    if (timeLimit) quiz.timeLimit = timeLimit;
+    if (level) quiz.level = level;
+
+    // Replace image if a new one is uploaded
+    if (req.fileLocations && req.fileLocations[0]) {
+      quiz.image = req.fileLocations[0];
+    }
+
+    await quiz.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Quiz updated successfully",
+      quiz,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating quiz",
+      error: error.message,
+    });
+  }
+};
+
+
 // ✅ Get all quizzes
 exports.getAllQuizzes = async (req, res) => {
   try {

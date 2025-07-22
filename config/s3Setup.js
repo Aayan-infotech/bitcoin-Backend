@@ -13,7 +13,7 @@ const secretsManagerClient = new SecretsManagerClient({
 // Fetch AWS credentials and config
 const getAwsCredentials = async () => {
   const command = new GetSecretValueCommand({
-    SecretId: process.env.AWS_SECRET_NAME || "bit-vault",
+    SecretId: "bit-vault",
   });
 
   const data = await secretsManagerClient.send(command);
@@ -27,8 +27,8 @@ const getAwsCredentials = async () => {
     return {
     accessKeyId: secret.AWS_ACCESS_KEY_ID,
     secretAccessKey: secret.AWS_SECRET_ACCESS_KEY,
-    bucketName: secret.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME, // fallback to env
-    region: secret.AWS_REGION || process.env.AWS_REGION || "us-east-1", // fallback
+    bucketName: secret.AWS_S3_BUCKET_NAME,
+    region: secret.AWS_REGION 
   };
 };
 
