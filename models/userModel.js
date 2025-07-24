@@ -44,6 +44,7 @@ const UserSchema = new Schema(
     quizPoints: { type: Number, default: 0 },
     videoPoints: { type: Number, default: 0 },
     totalPoints: { type: Number, default: 0 },
+    totalRewardClaimed: { type: Number, default: 0 },
     claimedRewards: [
       {
         level: Number,
