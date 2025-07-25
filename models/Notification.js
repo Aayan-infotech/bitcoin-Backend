@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema(
     },
     sentBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Or "Admin" if separate model
+      ref: "User", 
       required: false,
     },
     message: {

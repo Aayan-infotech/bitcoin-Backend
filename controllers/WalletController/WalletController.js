@@ -108,7 +108,7 @@ exports.getUserBalance = async (req, res) => {
 };
 exports.getPendingRewardClaims = async (req, res) => {
   try {
-    const claims = await RewardClaimRequestModel.find().populate(
+    const claims = await RewardClaimRequestModel.find({status:"Pending"}).populate(
       "user",
       "name"
     );
