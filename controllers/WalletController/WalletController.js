@@ -108,10 +108,9 @@ exports.getUserBalance = async (req, res) => {
 };
 exports.getPendingRewardClaims = async (req, res) => {
   try {
-    const claims = await RewardClaimRequestModel.find({status:"Pending"}).populate(
-      "user",
-      "name"
-    );
+    const claims = await RewardClaimRequestModel.find({
+      status: "Pending",
+    }).populate("user", "name");
     res.status(200).json({ success: true, claims });
   } catch (error) {
     res.status(500).json({
@@ -121,90 +120,6 @@ exports.getPendingRewardClaims = async (req, res) => {
     });
   }
 };
-
-exports.approveClaim = async (req, res) => {
-  try {
-    const { claimId } = req.params;
-
-    // const { amount } = req.body;
-    const amount = "0.00001";
-    if (!amount) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Amount is required" });
-    }
-
-    const claim = await RewardClaimRequest.findById(claimId);
-    if (!claim || claim.status !== "Pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or already processed claim",
-      });
-    }
-
-    const user = await User.findById(claim.user);
-    if (!user || !user.wallet_address) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User or wallet address not found" });
-    }
-
-    const tx = await sendTransaction(user.wallet_address, amount);
-    const receipt = await tx.wait();
-
-    const provider = await getProvider();
-    const gasPrice = await provider.getGasPrice();
-    const gasUsed = receipt.gasUsed;
-    const totalFee = gasPrice.mul(gasUsed);
-
-    await saveTransactionReceipt({
-      from: tx.from,
-      to: user.wallet_address,
-      hash: tx.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: gasUsed.toString(),
-      gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
-      totalFee: ethers.utils.formatEther(totalFee) + " ETH",
-      totalFeeValue: ethers.utils.formatEther(totalFee),
-      amount: amount + " ETH",
-      amountValue: amount,
-      status: receipt.status === 1 ? "Success" : "Failed",
-      timestamp: new Date().toISOString(),
-    });
-
-    await User.findByIdAndUpdate(user._id, {
-      $inc: { quizPoints: claim.score },
-    });
-
-    claim.status = "Approved";
-    await claim.save();
-
-    await QuizAttempt.findOneAndUpdate(
-      { userId: user._id, quizId: claim.quizId },
-      { rewardClaimed: true }
-    );
-    sendNotification(
-      user._id,
-      `Your request for reward claim has been approved by the admin, coins are available into your wallet`,
-      "wallet"
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Claim approved, points granted, and crypto sent",
-      transactionHash: tx.hash,
-      amountSent: amount,
-    });
-  } catch (error) {
-    console.error("Error approving claim:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to approve claim and send coins",
-      error: error.message,
-    });
-  }
-};
-
 exports.sendCoinsUsers = async (req, res) => {
   try {
     const userIdFrom = req.user.id;
@@ -292,8 +207,8 @@ exports.sendCoinsUsers = async (req, res) => {
       amount: amount + " ETH",
       amountValue: amount,
       status: receipt.status === 1 ? "Success" : "Failed",
-      receiverName, 
-      amountInUsd, 
+      receiverName,
+      amountInUsd,
       timestamp: new Date().toISOString(),
     });
 
@@ -401,6 +316,101 @@ exports.getUserTransactionDetail = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error while fetching user's transaction summary",
+    });
+  }
+};
+
+exports.approveClaim = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    // const {amount}=req.body
+    const amount = "0.00001";
+
+    const claims = await RewardClaimRequest.find({
+      user: userId,
+      status: "Pending",
+    });
+
+    if (!claims || claims.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No pending claims found for this user",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || !user.wallet_address) {
+      return res.status(404).json({
+        success: false,
+        message: "User or wallet address not found",
+      });
+    }
+
+    const tx = await sendTransaction(user.wallet_address, amount);
+    const receipt = await tx.wait();
+
+    const provider = await getProvider();
+    const gasPrice = await provider.getGasPrice();
+    const gasUsed = receipt.gasUsed;
+    const totalFee = gasPrice.mul(gasUsed);
+
+    await saveTransactionReceipt({
+      from: tx.from,
+      to: user.wallet_address,
+      hash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: gasUsed.toString(),
+      gasPrice: ethers.utils.formatUnits(gasPrice, "gwei") + " gwei",
+      totalFee: ethers.utils.formatEther(totalFee) + " ETH",
+      totalFeeValue: ethers.utils.formatEther(totalFee),
+      amount: amount + " ETH",
+      amountValue: amount,
+      status: receipt.status === 1 ? "Success" : "Failed",
+      timestamp: new Date().toISOString(),
+    });
+
+    const totalScore = claims.reduce(
+      (acc, claim) => acc + (claim.score || 0),
+      0
+    );
+
+    await User.findByIdAndUpdate(user._id, {
+      $inc: { totalPointsClaimed: totalScore },
+    });
+
+    const claimIds = claims.map((c) => c._id);
+
+    await RewardClaimRequest.updateMany(
+      { _id: { $in: claimIds } },
+      { $set: { status: "Approved" } }
+    );
+
+    for (const claim of claims) {
+      await QuizAttempt.findOneAndUpdate(
+        { userId: user._id, quizId: claim.quizId },
+        { rewardClaimed: true }
+      );
+    }
+
+    sendNotification(
+      user._id,
+      `Your reward claims have been approved. Coins sent to your wallet.`,
+      "wallet"
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Claims approved, points granted, and coins sent",
+      transactionHash: tx.hash,
+      amountSent: amount,
+      totalClaims: claims.length,
+    });
+  } catch (error) {
+    console.error("Error approving claims:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to approve claim requests",
+      error: error.message,
     });
   }
 };

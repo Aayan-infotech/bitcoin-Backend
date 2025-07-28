@@ -90,7 +90,7 @@ exports.submitQuizAnswers = async (req, res) => {
 
     const percentage = ((correctCount / totalQuestions) * 100).toFixed(2);
 
-    const maxPoints = totalQuestions*5;
+    const maxPoints = totalQuestions * 5;
     const earnedPoints = Math.floor(
       (correctCount / totalQuestions) * maxPoints
     );
@@ -99,7 +99,7 @@ exports.submitQuizAnswers = async (req, res) => {
       quiz: quizId,
       user: userId,
       score: earnedPoints,
-      correct:correctCount,
+      correct: correctCount,
       totalQuestions,
       percentage,
     });

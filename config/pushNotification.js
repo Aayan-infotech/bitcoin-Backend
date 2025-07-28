@@ -18,7 +18,6 @@ const sendNotification = async (userIds, message, type = "promotional", sentBy, 
 
     const savedNotifications = await Notification.insertMany(notificationsToInsert);
 
-    // Step 2: Send push notifications
     const usersWithTokens = await User.find({
       _id: { $in: ids },
       deviceToken: { $exists: true, $ne: null },

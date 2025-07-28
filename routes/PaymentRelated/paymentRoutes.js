@@ -7,7 +7,7 @@ router.post('/transfer',isAdmin, controller.sendCoins);
 router.get('/transaction/:hash', controller.checkTransaction);
 router.get('/balance/:address',isAdmin, controller.getUserBalance);
 router.get('/pending-requests',isAdmin, controller.getPendingRewardClaims);
-router.post('/approve-request/:claimId',isAdmin, controller.approveClaim);
+router.post('/approve-request/:userId',isAdmin, controller.approveClaim);
 router.post('/transfer-users', auth, controller.sendCoinsUsers);
 router.get('/transaction',auth, controller.getUserTransactionDetail);
 // router.get('/balance-users/:address', controller.getUserBalanceNew);
