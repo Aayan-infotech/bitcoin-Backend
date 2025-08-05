@@ -42,7 +42,7 @@ const UserSchema = new Schema(
     },
     level: { type: Number, default: 1 },
     quizPoints: { type: Number, default: 0 },
-    videoPoints: { type: Number, default: 0 },
+    // videoPoints: { type: Number, default: 0 },
     totalPoints: { type: Number, default: 0 },
     totalPointsClaimed: { type: Number, default: 0 },
     claimedRewards: [

@@ -45,7 +45,7 @@ exports.startCourse = async (req, res) => {
       success: true,
       message: "Course started successfully.",
       progress,
-      userCourses: user.Courses, 
+      userCourses: user.Courses,
     });
   } catch (error) {
     console.error("Error starting course:", error);
@@ -87,20 +87,7 @@ exports.updatecourseProgress = async (req, res) => {
 
     progress.lastWatched = SectionId;
     await progress.save();
-
-    if (isNewSection) {
-      user.videoPoints = (user.videoPoints || 0) + 5;
-      user.totalPoints = (user.quizPoints || 0) + user.videoPoints;
-
-      const newLevel = getLevelFromPoints(user.totalPoints);
-      const leveledUp = newLevel > (user.level || 1);
-
-      if (leveledUp) {
-        user.level = newLevel;
-      }
-
-      await user.save();
-    }
+    await user.save();
 
     return res.status(200).json({
       success: true,
@@ -111,13 +98,11 @@ exports.updatecourseProgress = async (req, res) => {
       level: user.level,
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error updating progress",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Error updating progress",
+      error: error.message,
+    });
   }
 };
 
@@ -231,12 +216,10 @@ exports.getCourseProgressForUser = async (req, res) => {
     return res.status(200).json({ success: true, course: response });
   } catch (error) {
     console.error("Error fetching course progress:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error fetching course progress",
-        error,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching course progress",
+      error,
+    });
   }
 };
