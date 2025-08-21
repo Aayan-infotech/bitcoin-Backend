@@ -3,7 +3,7 @@ const {
   GetSecretValueCommand
 } = require("@aws-sdk/client-secrets-manager");
 
-const secretName ="bit-vault";
+const secretName ="bitcoin-secret";
 const region ="us-east-1"; 
 
 let cachedSecrets = null;
