@@ -13,7 +13,7 @@ const secretsManagerClient = new SecretsManagerClient({
 // Fetch AWS credentials and config
 const getAwsCredentials = async () => {
   const command = new GetSecretValueCommand({
-    SecretId: "bit-vault",
+    SecretId: "bitcoin-secret",
   });
 
   const data = await secretsManagerClient.send(command);
